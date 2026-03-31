@@ -1,0 +1,11 @@
+{
+  "yaml.schemas": {
+    "./spec/osop.schema.json": ["*.osop.yaml", "*.osop"]
+  },
+  "yaml.customTags": [
+    "!Ref scalar",
+    "!GetAtt scalar",
+    "!Sub scalar",
+    "!Join sequence"
+  ]
+}

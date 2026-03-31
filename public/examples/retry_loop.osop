@@ -1,0 +1,48 @@
+osop_version: "1.0"
+id: retry_loop
+name: Retry Loop Workflow
+description: Demonstrates a loop mechanism for retrying an operation until successful.
+metadata:
+  creation_date: "2026-03-31"
+  version: "1.0.0"
+  change_summary: "Retry loop with conditional exit"
+
+nodes:
+  - id: fetch_data
+    type: api
+    purpose: Attempt to fetch data from an external API
+    retry_policy:
+      max_retries: 3
+      strategy: exponential_backoff
+      backoff_sec: 5
+    explain:
+      what: "嘗試從外部 API 取得資料"
+
+  - id: check_success
+    type: system
+    subtype: router
+    purpose: Check if the API call was successful
+    explain:
+      what: "檢查 API 呼叫是否成功"
+
+  - id: process_data
+    type: agent
+    purpose: Process the successfully fetched data
+    explain:
+      what: "處理成功取得的資料"
+
+edges:
+  - from: fetch_data
+    to: check_success
+    mode: sequential
+
+  - from: check_success
+    to: process_data
+    mode: conditional
+    when: "status == 'success'"
+
+  - from: check_success
+    to: fetch_data
+    mode: loop
+    when: "status == 'failed' AND retry_count < 3"
+    label: "Retry API Call"

@@ -1,0 +1,67 @@
+osop_version: "1.0"
+id: conditional_approval
+name: Conditional Approval Workflow
+description: Demonstrates how to use IF/ELSE routing in OSOP.
+metadata:
+  creation_date: "2026-03-31"
+  version: "1.0.0"
+  change_summary: "Initial creation of conditional approval workflow"
+
+nodes:
+  - id: submit_request
+    type: human
+    purpose: User submits a purchase request.
+    role: employee
+    explain:
+      what: "員工提交採購申請"
+
+  - id: check_amount
+    type: system
+    subtype: router
+    purpose: Check if the purchase amount requires manager approval.
+    explain:
+      what: "系統判斷金額是否超過門檻"
+
+  - id: auto_approve
+    type: system
+    purpose: Automatically approve small requests.
+    explain:
+      what: "自動核准小額採購"
+
+  - id: manager_review
+    type: human
+    purpose: Manager reviews high-value requests.
+    role: manager
+    explain:
+      what: "主管審核大額採購"
+
+  - id: process_payment
+    type: api
+    purpose: Process the approved payment.
+    explain:
+      what: "呼叫 API 進行付款"
+
+edges:
+  - from: submit_request
+    to: check_amount
+    mode: sequential
+
+  - from: check_amount
+    to: auto_approve
+    mode: conditional
+    when: "amount < 1000"
+
+  - from: check_amount
+    to: manager_review
+    mode: conditional
+    when: "amount >= 1000"
+
+  - from: auto_approve
+    to: process_payment
+    mode: sequential
+
+  - from: manager_review
+    to: process_payment
+    mode: conditional
+    when: "approved == true"
+    label: "Approved"

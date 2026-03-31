@@ -1,0 +1,52 @@
+osop: "1.0.0"
+name: "Fallback Error Handling"
+description: "Demonstrates fallback routing when a primary operation fails."
+
+nodes:
+  - id: "primary_payment"
+    type: "api"
+    purpose: "Attempt payment via primary gateway"
+
+  - id: "payment_status"
+    type: "system"
+    subtype: "router"
+    purpose: "Check if primary payment succeeded"
+
+  - id: "fallback_payment"
+    type: "api"
+    purpose: "Attempt payment via secondary gateway"
+
+  - id: "payment_success"
+    type: "db"
+    purpose: "Record successful payment"
+
+  - id: "payment_failed"
+    type: "human"
+    purpose: "Notify user of payment failure"
+
+edges:
+  - from: "primary_payment"
+    to: "payment_status"
+    mode: "sequential"
+
+  - from: "payment_status"
+    to: "payment_success"
+    mode: "conditional"
+    when: "success"
+
+  - from: "payment_status"
+    to: "fallback_payment"
+    mode: "fallback"
+    when: "otherwise"
+    label: "Primary Failed"
+
+  - from: "fallback_payment"
+    to: "payment_success"
+    mode: "conditional"
+    when: "success"
+
+  - from: "fallback_payment"
+    to: "payment_failed"
+    mode: "error"
+    when: "otherwise"
+    label: "Secondary Failed"

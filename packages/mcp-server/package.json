@@ -1,0 +1,23 @@
+{
+  "name": "@osop/mcp-server",
+  "version": "1.0.0",
+  "description": "OSOP MCP Server for OpenClaw and other AI Agents",
+  "type": "module",
+  "bin": {
+    "osop-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,52 @@
+osop_version: "1.0.0"
+name: "Conditional Approval Workflow"
+description: "Demonstrates how to use IF/ELSE routing in OSOP."
+
+nodes:
+  - id: submit_request
+    type: human
+    purpose: "User submits a purchase request."
+    role: "employee"
+
+  - id: check_amount
+    type: system
+    subtype: router
+    purpose: "Check if the purchase amount requires manager approval."
+
+  - id: auto_approve
+    type: system
+    purpose: "Automatically approve small requests."
+
+  - id: manager_review
+    type: human
+    purpose: "Manager reviews high-value requests."
+    role: "manager"
+
+  - id: process_payment
+    type: api
+    purpose: "Process the approved payment."
+
+edges:
+  - from: submit_request
+    to: check_amount
+    mode: sequential
+
+  - from: check_amount
+    to: auto_approve
+    mode: conditional
+    when: "amount < 1000"
+
+  - from: check_amount
+    to: manager_review
+    mode: conditional
+    when: "amount >= 1000"
+
+  - from: auto_approve
+    to: process_payment
+    mode: sequential
+
+  - from: manager_review
+    to: process_payment
+    mode: conditional
+    when: "approved == true"
+    label: "Approved"

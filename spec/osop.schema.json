@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://osop.dev/schema/v1.0.0/osop.schema.json",
+  "title": "OSOP Workflow Schema",
+  "type": "object",
+  "required": ["osop_version", "id", "name", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "osop_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$" },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "owner": { "type": "string" },
+    "visibility": { "type": "string", "enum": ["public", "private"] },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "workflow_type": {
+      "type": "object",
+      "required": ["primary"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "type": "string" },
+        "secondary": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "extends": {
+      "description": "Inheritance: base workflow id or path.",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "version": { "type": "string" },
+        "change_summary": { "type": "string" }
+      }
+    },
+    "schemas": {
+      "description": "Schema registry (JSON Schema fragments).",
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "roles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "message_contracts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/messageContract" }
+    },
+    "tests": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/testCase" }
+    },
+    "views": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["graph", "story", "role", "debug", "agent"] }
+    },
+    "security": { "$ref": "#/$defs/securityPolicy" },
+    "observability": { "$ref": "#/$defs/observabilityPolicy" },
+    "evolution": { "$ref": "#/$defs/evolutionPolicy" },
+    "ledger": { "$ref": "#/$defs/ledgerPolicy" }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "purpose"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["human", "agent", "api", "cli", "db", "git", "docker", "cicd", "mcp", "system"]
+        },
+        "subtype": { "type": "string" },
+        "role": { "type": "string" },
+        "owner": { "type": "string" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "runtime": {
+          "description": "Node runtime config.",
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "provider": { "type": "string" },
+            "model": { "type": "string" },
+            "os": { "type": "string" },
+            "image": { "type": "string" },
+            "command": { "type": "string" },
+            "endpoint": { "type": "string" },
+            "repo": { "type": "string" },
+            "action": { "type": "string" },
+            "branch": { "type": "string" },
+            "engine": { "type": "string" },
+            "table": { "type": "string" },
+            "environment": { "type": "string" },
+            "method": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ioSpec" }
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ioSpec" }
+        },
+        "success_criteria": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "failure_modes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "retry_policy": { "$ref": "#/$defs/retryPolicy" },
+        "timeout_sec": { "type": "number", "minimum": 0 },
+        "idempotency": { "$ref": "#/$defs/idempotencyPolicy" },
+        "handoff": { "$ref": "#/$defs/handoffSpec" },
+        "explain": { "$ref": "#/$defs/explainSpec" },
+        "observability": { "$ref": "#/$defs/observabilityNode" },
+        "security": { "$ref": "#/$defs/securityNode" },
+        "approval_gate": { "$ref": "#/$defs/approvalGate" }
+      }
+    },
+    "ioSpec": {
+      "type": "object",
+      "required": ["name", "schema"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "schema": { "type": "string" },
+        "required": { "type": "boolean", "default": false },
+        "description": { "type": "string" },
+        "explain": { "$ref": "#/$defs/explainSpec" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "mode": {
+          "type": "string",
+          "enum": ["sequential", "conditional", "parallel", "loop", "event"],
+          "default": "sequential"
+        },
+        "when": {
+          "description": "Condition expression.",
+          "type": "string"
+        },
+        "label": { "type": "string" }
+      }
+    },
+    "messageContract": {
+      "type": "object",
+      "required": ["id", "producer", "consumer", "kind", "format"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "producer": { "type": "string" },
+        "consumer": { "type": "string" },
+        "kind": { "type": "string", "enum": ["task", "result", "state", "error", "event"] },
+        "format": { "type": "string", "enum": ["json", "text"] },
+        "schema_ref": {
+          "description": "Reference into schemas registry.",
+          "type": "string"
+        },
+        "semantics": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "testCase": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["unit", "integration", "e2e", "simulation"] },
+        "target_node": { "type": "string" },
+        "run": { "type": "string", "enum": ["full_workflow"] },
+        "input": { "type": "object", "additionalProperties": true },
+        "expect": { "type": "object", "additionalProperties": true },
+        "mocks": { "type": "object", "additionalProperties": true },
+        "failure_injection": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "retryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_retries": { "type": "number", "minimum": 0, "default": 0 },
+        "strategy": { "type": "string", "enum": ["fixed", "exponential_backoff"], "default": "fixed" },
+        "backoff_sec": { "type": "number", "minimum": 0 }
+      }
+    },
+    "idempotencyPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "key": {
+          "description": "Idempotency key expression.",
+          "type": "string"
+        }
+      }
+    },
+    "handoffSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary_for_next_node": { "type": "string" },
+        "expected_output": { "type": "string" },
+        "escalation": { "type": "string" }
+      }
+    },
+    "explainSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "why": { "type": "string" },
+        "what": { "type": "string" },
+        "result": { "type": "string" }
+      }
+    },
+    "observabilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "emit_events": { "type": "boolean", "default": true },
+        "trace_id_required": { "type": "boolean", "default": true },
+        "default_log_level": { "type": "string", "enum": ["debug", "info", "warn", "error"], "default": "info" }
+      }
+    },
+    "observabilityNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "log": { "type": "boolean", "default": true },
+        "metrics": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["duration_ms", "retry_count", "success_rate", "cost_units"] }
+        }
+      }
+    },
+    "securityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secrets_provider": {
+          "description": "e.g., vault, aws_secrets_manager, github_secrets",
+          "type": "string"
+        },
+        "default_permissions": { "type": "array", "items": { "type": "string" } },
+        "approval_required_for": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "securityNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "secrets": { "type": "array", "items": { "type": "string" } },
+        "risk_level": {
+          "description": "low, medium, high, critical",
+          "type": "string"
+        }
+      }
+    },
+    "approvalGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "boolean", "default": false },
+        "approver_role": { "type": "string" }
+      }
+    },
+    "evolutionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "strategy": { "type": "string", "enum": ["ai_assisted", "manual"], "default": "ai_assisted" },
+        "feedback_sources": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["logs", "metrics", "human_feedback"] }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "type": "string", "enum": ["pull_request", "patch_only"], "default": "pull_request" },
+            "require_human_approval": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+    "ledgerPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "store": {
+          "description": "e.g., sqlite, postgres, s3",
+          "type": "string"
+        },
+        "artifact_store": {
+          "description": "e.g., local_fs, s3, gcs",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

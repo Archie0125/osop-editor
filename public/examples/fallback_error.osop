@@ -1,0 +1,67 @@
+osop_version: "1.0"
+id: fallback_error_handling
+name: Fallback Error Handling
+description: Demonstrates fallback routing when a primary operation fails.
+metadata:
+  creation_date: "2026-03-31"
+  version: "1.0.0"
+  change_summary: "Fallback and error edge modes"
+
+nodes:
+  - id: primary_payment
+    type: api
+    purpose: Attempt payment via primary gateway
+    explain:
+      what: "嘗試透過主要支付閘道付款"
+
+  - id: payment_status
+    type: system
+    subtype: router
+    purpose: Check if primary payment succeeded
+    explain:
+      what: "檢查主要付款是否成功"
+
+  - id: fallback_payment
+    type: api
+    purpose: Attempt payment via secondary gateway
+    explain:
+      what: "嘗試透過備援支付閘道付款"
+
+  - id: payment_success
+    type: db
+    purpose: Record successful payment
+    explain:
+      what: "記錄成功的付款交易"
+
+  - id: payment_failed
+    type: human
+    purpose: Notify user of payment failure
+    explain:
+      what: "通知用戶付款失敗，需人工處理"
+
+edges:
+  - from: primary_payment
+    to: payment_status
+    mode: sequential
+
+  - from: payment_status
+    to: payment_success
+    mode: conditional
+    when: "success"
+
+  - from: payment_status
+    to: fallback_payment
+    mode: fallback
+    when: "otherwise"
+    label: "Primary Failed"
+
+  - from: fallback_payment
+    to: payment_success
+    mode: conditional
+    when: "success"
+
+  - from: fallback_payment
+    to: payment_failed
+    mode: error
+    when: "otherwise"
+    label: "Secondary Failed"

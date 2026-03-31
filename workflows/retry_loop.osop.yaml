@@ -1,0 +1,33 @@
+osop: "1.0.0"
+name: "Retry Loop Workflow"
+description: "Demonstrates a loop mechanism for retrying an operation until successful."
+
+nodes:
+  - id: "fetch_data"
+    type: "api"
+    purpose: "Attempt to fetch data from an external API"
+
+  - id: "check_success"
+    type: "system"
+    subtype: "router"
+    purpose: "Check if the API call was successful"
+
+  - id: "process_data"
+    type: "agent"
+    purpose: "Process the successfully fetched data"
+
+edges:
+  - from: "fetch_data"
+    to: "check_success"
+    mode: "sequential"
+
+  - from: "check_success"
+    to: "process_data"
+    mode: "conditional"
+    when: "status == 'success'"
+
+  - from: "check_success"
+    to: "fetch_data"
+    mode: "loop"
+    when: "status == 'failed' AND retry_count < 3"
+    label: "Retry API Call"

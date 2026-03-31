@@ -1,0 +1,205 @@
+osop_version: "1.0"
+id: esg_pdf_pipeline
+name: ESG PDF → AI → DB Pipeline
+description: 將上傳 PDF 由 AI 抽取為結構化 JSON，驗證後寫入 DB，並備份到 Git。
+owner: archie
+visibility: private
+workflow_type:
+  primary: data_pipeline
+  secondary: [ai_extraction, human_review]
+views: [graph, story, role, debug, agent]
+schemas:
+  ExtractedESGMetrics:
+    type: object
+    required: [report_id, metrics]
+    properties:
+      report_id: { type: string }
+      metrics:
+        type: array
+        items:
+          type: object
+          required: [key, value, unit, source_page]
+          properties:
+            key: { type: string }
+            value: { type: number }
+            unit: { type: string }
+            source_page: { type: number }
+  DbInsertResult:
+    type: object
+    required: [inserted_rows]
+    properties:
+      inserted_rows: { type: number }
+nodes:
+  - id: upload_pdf
+    type: human
+    purpose: 上傳 ESG PDF 報告
+    inputs:
+      - name: pdf_file
+        schema: file/pdf
+        required: true
+    outputs:
+      - name: pdf_file_ref
+        schema: file_ref
+        explain:
+          why: 讓流程取得原始證據資料
+          what: 使用者上傳 PDF 並生成檔案引用
+          result: 產生可追蹤的 pdf_file_ref
+  - id: extract_metrics
+    type: agent
+    role: executor
+    purpose: 從 PDF 抽取 ESG 指標並輸出結構化 JSON
+    runtime:
+      provider: openai
+      model: gpt-5.4
+    inputs:
+      - name: pdf_file_ref
+        schema: file_ref
+        required: true
+    outputs:
+      - name: extracted
+        schema: "#/schemas/ExtractedESGMetrics"
+    success_criteria:
+      - 输出必须符合 ExtractedESGMetrics schema
+      - 每筆 metric 必須包含 source_page
+    failure_modes:
+      - schema_invalid
+      - missing_source_page
+      - low_confidence
+    retry_policy:
+      max_retries: 2
+      strategy: exponential_backoff
+      backoff_sec: 3
+    timeout_sec: 120
+    handoff:
+      summary_for_next_node: >
+        你將收到抽取後的 metrics。請驗證 schema、補齊單位規範與缺失欄位，低信心需標記 review_required=true。
+      expected_output: Validated metrics payload
+      escalation: human_review
+    observability:
+      log: true
+      metrics: [duration_ms, retry_count, cost_units]
+    security:
+      permissions: [artifact.read, llm.call]
+      secrets: [OPENAI_API_KEY]
+      risk_level: medium
+  - id: validate_metrics
+    type: docker
+    purpose: 用可重現的 Python 環境做 schema 驗證與規則檢查
+    runtime:
+      image: python:3.11
+      command: "python validate.py --input {{inputs.extracted}}"
+    inputs:
+      - name: extracted
+        schema: "#/schemas/ExtractedESGMetrics"
+        required: true
+    outputs:
+      - name: validated
+        schema: "#/schemas/ExtractedESGMetrics"
+    success_criteria:
+      - 所有 required 欄位存在
+      - unit 轉換完成（如必要）
+    failure_modes:
+      - validation_failed
+    retry_policy:
+      max_retries: 1
+      strategy: fixed
+      backoff_sec: 0
+    timeout_sec: 60
+    security:
+      permissions: [docker.run, artifact.read]
+      risk_level: medium
+  - id: save_db
+    type: db
+    purpose: 寫入 PostgreSQL（或其他 DB）供 dashboard 使用
+    runtime:
+      engine: postgres
+      action: insert
+      table: esg_metrics
+    inputs:
+      - name: validated
+        schema: "#/schemas/ExtractedESGMetrics"
+        required: true
+    outputs:
+      - name: result
+        schema: "#/schemas/DbInsertResult"
+    idempotency:
+      enabled: true
+      key: "run_id + report_id"
+    security:
+      permissions: [db.write]
+      secrets: [DB_PASSWORD]
+      risk_level: high
+    approval_gate:
+      required: true
+      approver_role: reviewer
+  - id: git_backup
+    type: git
+    purpose: 將抽取結果（或統計摘要）commit 到 repo 當作可追溯備份
+    runtime:
+      repo: "github.com/org/esg-reports"
+      action: commit_push
+      branch: main
+    inputs:
+      - name: validated
+        schema: "#/schemas/ExtractedESGMetrics"
+        required: true
+    security:
+      permissions: [git.push]
+      secrets: [GITHUB_TOKEN]
+      risk_level: medium
+  - id: human_review
+    type: human
+    role: reviewer
+    purpose: 當驗證失敗或高風險寫入前，進行人工審核/批准
+    inputs:
+      - name: pending_payload
+        schema: object
+        required: true
+    outputs:
+      - name: approval
+        schema: object
+        explain:
+          why: 降低高風險操作與 AI 抽取錯誤
+          what: 人類審核並決定 approve/reject/edit
+          result: 使流程可被治理與稽核
+edges:
+  - from: upload_pdf
+    to: extract_metrics
+    mode: sequential
+  - from: extract_metrics
+    to: validate_metrics
+    mode: sequential
+  - from: validate_metrics
+    to: human_review
+    mode: conditional
+    when: "validation_failed == true"
+  - from: validate_metrics
+    to: save_db
+    mode: sequential
+  - from: save_db
+    to: git_backup
+    mode: sequential
+tests:
+  - id: test_extract_schema
+    type: unit
+    target_node: extract_metrics
+    input:
+      pdf_file_ref: "fixtures/sample_esg.pdf"
+    expect:
+      schema_valid: true
+  - id: test_e2e_pipeline
+    type: e2e
+    run: full_workflow
+    expect:
+      status: success
+ledger:
+  enabled: true
+  store: postgres
+  artifact_store: s3
+evolution:
+  enabled: true
+  strategy: ai_assisted
+  feedback_sources: [logs, metrics, human_feedback]
+  output:
+    mode: pull_request
+    require_human_approval: true

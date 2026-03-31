@@ -1,0 +1,67 @@
+osop: "1.0.0"
+name: "Parallel Data Processing"
+description: "Demonstrates parallel execution of multiple tasks."
+
+nodes:
+  - id: "start_ingestion"
+    type: "api"
+    purpose: "Trigger data ingestion process"
+
+  - id: "parallel_split"
+    type: "system"
+    subtype: "parallel"
+    purpose: "Split workflow into parallel branches"
+
+  - id: "process_images"
+    type: "agent"
+    purpose: "Process and resize images"
+
+  - id: "process_text"
+    type: "agent"
+    purpose: "Extract and translate text"
+
+  - id: "process_audio"
+    type: "agent"
+    purpose: "Transcribe audio files"
+
+  - id: "parallel_join"
+    type: "system"
+    subtype: "parallel"
+    purpose: "Wait for all parallel branches to complete"
+
+  - id: "aggregate_results"
+    type: "db"
+    purpose: "Save aggregated results to database"
+
+edges:
+  - from: "start_ingestion"
+    to: "parallel_split"
+    mode: "sequential"
+
+  - from: "parallel_split"
+    to: "process_images"
+    mode: "sequential"
+
+  - from: "parallel_split"
+    to: "process_text"
+    mode: "sequential"
+
+  - from: "parallel_split"
+    to: "process_audio"
+    mode: "sequential"
+
+  - from: "process_images"
+    to: "parallel_join"
+    mode: "sequential"
+
+  - from: "process_text"
+    to: "parallel_join"
+    mode: "sequential"
+
+  - from: "process_audio"
+    to: "parallel_join"
+    mode: "sequential"
+
+  - from: "parallel_join"
+    to: "aggregate_results"
+    mode: "sequential"

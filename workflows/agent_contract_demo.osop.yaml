@@ -1,0 +1,105 @@
+osop_version: "1.0"
+id: agent_contract_demo
+name: Agent-to-Agent Collaboration Contract
+workflow_type:
+  primary: agent_orchestration
+  secondary: [planning, validation, human_review]
+schemas:
+  TaskSpec:
+    type: object
+    required: [goal, constraints, deliverable_schema]
+    properties:
+      goal: { type: string }
+      constraints: { type: array, items: { type: string } }
+      deliverable_schema: { type: string }
+  ResultEnvelope:
+    type: object
+    required: [status, payload, summary]
+    properties:
+      status: { type: string, enum: [success, failed, partial] }
+      payload: { type: object }
+      summary: { type: string }
+      confidence: { type: number }
+nodes:
+  - id: planner
+    type: agent
+    role: planner
+    purpose: 將需求轉成可執行計畫（TaskSpec）
+    runtime:
+      provider: anthropic
+      model: claude-code
+    outputs:
+      - name: task
+        schema: "#/schemas/TaskSpec"
+    handoff:
+      summary_for_next_node: >
+        你將收到 TaskSpec。請完全依 constraints 執行並輸出符合 deliverable_schema 的 payload。
+      expected_output: payload per deliverable_schema
+  - id: executor
+    type: agent
+    role: executor
+    purpose: 依 TaskSpec 執行、產出結果（ResultEnvelope）
+    runtime:
+      provider: openai
+      model: gpt-5.4
+    inputs:
+      - name: task
+        schema: "#/schemas/TaskSpec"
+        required: true
+    outputs:
+      - name: result
+        schema: "#/schemas/ResultEnvelope"
+  - id: validator
+    type: agent
+    role: validator
+    purpose: 檢查 executor 輸出是否符合 schema 與 constraints，必要時要求重做或升級人工
+    runtime:
+      provider: google
+      model: gemini-1.5-pro
+    inputs:
+      - name: result
+        schema: "#/schemas/ResultEnvelope"
+    outputs:
+      - name: validated
+        schema: "#/schemas/ResultEnvelope"
+    success_criteria:
+      - status == success
+      - confidence >= 0.85
+    failure_modes:
+      - schema_invalid
+      - low_confidence
+    handoff:
+      escalation: human_reviewer
+  - id: human_reviewer
+    type: human
+    role: reviewer
+    purpose: 對低信心或高風險決策進行覆核
+    inputs:
+      - name: validated
+        schema: "#/schemas/ResultEnvelope"
+message_contracts:
+  - id: planner_to_executor_task_v1
+    producer: planner
+    consumer: executor
+    kind: task
+    format: json
+    schema_ref: "#/schemas/TaskSpec"
+  - id: executor_to_validator_result_v1
+    producer: executor
+    consumer: validator
+    kind: result
+    format: json
+    schema_ref: "#/schemas/ResultEnvelope"
+edges:
+  - from: planner
+    to: executor
+  - from: executor
+    to: validator
+  - from: validator
+    to: human_reviewer
+    mode: conditional
+    when: "confidence < 0.85 or status != 'success'"
+ledger:
+  enabled: true
+  store: postgres
+  artifact_store: s3

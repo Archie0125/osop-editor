@@ -1,0 +1,59 @@
+osop_version: "1.0"
+id: software_cicd
+name: Software Release Pipeline
+description: Full CI/CD pipeline with AI code review and multi-stage deployment.
+metadata:
+  creation_date: "2026-03-31"
+  version: "1.0.0"
+  change_summary: "CI/CD release pipeline with AI review"
+
+nodes:
+  - id: code_push
+    type: git
+    purpose: Developer pushes code to main
+    explain:
+      what: "工程師合併 PR 到 main 分支"
+
+  - id: run_tests
+    type: cicd
+    purpose: Execute unit and integration tests
+    explain:
+      what: "GitHub Actions 執行自動化測試"
+
+  - id: ai_code_review
+    type: agent
+    purpose: Perform security and quality review
+    runtime:
+      model: claude-sonnet-4-20250514
+    explain:
+      what: "AI 掃描程式碼，尋找潛在漏洞或效能問題"
+
+  - id: deploy_staging
+    type: docker
+    purpose: Deploy to staging environment
+    explain:
+      what: "打包 Docker Image 並部署至測試區"
+
+  - id: qa_approval
+    type: human
+    purpose: QA team sign-off
+    explain:
+      what: "QA 團隊進行手動驗證並核准發布"
+
+  - id: deploy_prod
+    type: cicd
+    purpose: Deploy to production
+    explain:
+      what: "正式部署至 Production 環境"
+
+edges:
+  - from: code_push
+    to: run_tests
+  - from: run_tests
+    to: ai_code_review
+  - from: ai_code_review
+    to: deploy_staging
+  - from: deploy_staging
+    to: qa_approval
+  - from: qa_approval
+    to: deploy_prod

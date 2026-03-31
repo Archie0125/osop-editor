@@ -1,0 +1,102 @@
+osop_version: "1.0"
+id: cicd_deploy
+name: CI/CD Deploy with Rollback
+workflow_type:
+  primary: cicd
+  secondary: [devops, release]
+nodes:
+  - id: on_git_push
+    type: git
+    purpose: 監聽 repo push 事件（或由外部 trigger）
+    runtime:
+      repo: "github.com/org/myapp"
+      action: push_event
+  - id: build
+    type: cli
+    purpose: Build application
+    runtime:
+      os: linux
+      command: "npm ci && npm run build"
+    retry_policy:
+      max_retries: 1
+      strategy: fixed
+  - id: unit_test
+    type: cli
+    purpose: Run unit tests
+    runtime:
+      os: linux
+      command: "npm test"
+    timeout_sec: 600
+  - id: docker_build
+    type: docker
+    purpose: Build container image
+    runtime:
+      image: docker:stable
+      command: "docker build -t myapp:${GIT_SHA} ."
+    security:
+      permissions: [docker.build]
+      risk_level: medium
+  - id: deploy_staging
+    type: cicd
+    purpose: Deploy to staging environment
+    runtime:
+      provider: github_actions
+      environment: staging
+      action: deploy
+    security:
+      permissions: [deploy.staging]
+      risk_level: medium
+  - id: smoke_test
+    type: api
+    purpose: Health check after deploy
+    runtime:
+      method: GET
+      url: "https://staging.example.com/health"
+    success_criteria:
+      - HTTP 200
+    failure_modes:
+      - non_200
+      - timeout
+    retry_policy:
+      max_retries: 2
+      strategy: fixed
+      backoff_sec: 5
+  - id: rollback
+    type: cicd
+    purpose: Rollback if smoke test fails
+    runtime:
+      provider: github_actions
+      environment: staging
+      action: rollback
+    security:
+      permissions: [deploy.rollback]
+      risk_level: high
+    approval_gate:
+      required: true
+      approver_role: reviewer
+edges:
+  - from: on_git_push
+    to: build
+  - from: build
+    to: unit_test
+  - from: unit_test
+    to: docker_build
+  - from: docker_build
+    to: deploy_staging
+  - from: deploy_staging
+    to: smoke_test
+  - from: smoke_test
+    to: rollback
+    mode: conditional
+    when: "result != 'success'"
+ledger:
+  enabled: true
+  store: postgres
+  artifact_store: s3
+evolution:
+  enabled: true
+  strategy: ai_assisted
+  feedback_sources: [logs, metrics]
+  output:
+    mode: pull_request
+    require_human_approval: true

@@ -1,0 +1,52 @@
+osop_version: "1.0"
+id: multi_agent_collab
+name: Multi-Agent Smart Contract
+description: Three AI agents collaborate - architect, developer, security auditor.
+version: "1.2.0"
+
+contract:
+  guarantees:
+    - "All code must pass static analysis"
+    - "Human approval required for production"
+
+nodes:
+  - id: planner
+    type: agent
+    role: architect
+    purpose: "OpenClaw: Analyze requirements and generate architecture"
+    runtime:
+      model: openclaw-v1
+    outputs:
+      - name: arch_doc
+        schema: ArchitectureSchema
+    explain:
+      what: "OpenClaw 擔任架構師，產出系統設計文件"
+
+  - id: coder
+    type: agent
+    role: developer
+    purpose: "Claude: Write code based on architecture"
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: arch_doc
+        schema: ArchitectureSchema
+    explain:
+      what: "Claude 擔任工程師，根據架構文件撰寫程式碼"
+
+  - id: reviewer
+    type: agent
+    role: security_auditor
+    purpose: "Codex: Review code for vulnerabilities"
+    runtime:
+      model: codex-secure
+    success_criteria:
+      - "0 critical vulnerabilities"
+    explain:
+      what: "Codex 擔任資安稽核，驗證程式碼並確保無漏洞"
+
+edges:
+  - from: planner
+    to: coder
+  - from: coder
+    to: reviewer

@@ -1,0 +1,44 @@
+osop_version: "1.0"
+id: esg_pipeline
+name: ESG PDF Pipeline
+description: End-to-end pipeline for extracting and storing ESG data from PDF reports.
+metadata:
+  creation_date: "2026-03-31"
+  version: "1.1.0"
+  change_summary: "Added metadata field to ESG pipeline"
+
+nodes:
+  - id: upload
+    type: human
+    purpose: Upload ESG PDF
+    explain:
+      what: "使用者上傳永續報告書 PDF"
+
+  - id: extract
+    type: agent
+    role: executor
+    purpose: Extract data from PDF
+    runtime:
+      model: gpt-4o
+    explain:
+      what: "AI 自動解析內容並抽取 ESG 指標"
+
+  - id: validate
+    type: system
+    purpose: Validate extracted data format
+    explain:
+      what: "系統檢查資料 Schema 是否正確"
+
+  - id: save_db
+    type: db
+    purpose: Store structured data
+    explain:
+      what: "最後資料進入資料庫並顯示於 Dashboard"
+
+edges:
+  - from: upload
+    to: extract
+  - from: extract
+    to: validate
+  - from: validate
+    to: save_db
