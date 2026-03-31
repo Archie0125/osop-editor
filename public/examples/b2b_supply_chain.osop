@@ -1,0 +1,149 @@
+osop_version: "1.0"
+id: b2b_supply_chain
+name: B2B Supply Chain Order Flow
+description: Cross-company procurement workflow between buyer, supplier, and logistics.
+metadata:
+  creation_date: "2026-03-31"
+  version: "1.0.0"
+  change_summary: "B2B supply chain with company nodes"
+
+nodes:
+  - id: buyer_company
+    type: company
+    purpose: Buyer initiates purchase order
+    company:
+      name: "Acme Corp"
+      role: buyer
+      contact: "procurement@acme.com"
+    explain:
+      what: "採購方公司發起採購訂單"
+
+  - id: review_po
+    type: human
+    purpose: Procurement manager reviews and approves PO
+    pool: "Acme Corp"
+    lane: "Procurement"
+    explain:
+      what: "採購主管審核並批准採購單"
+
+  - id: supplier_company
+    type: company
+    purpose: Supplier receives and processes order
+    company:
+      name: "GlobalParts Ltd"
+      role: supplier
+      contact: "orders@globalparts.com"
+      sla: "48h acknowledgment"
+    explain:
+      what: "供應商公司接收並處理訂單"
+
+  - id: confirm_order
+    type: api
+    purpose: Supplier confirms order via EDI
+    pool: "GlobalParts Ltd"
+    runtime:
+      method: POST
+      url: "https://api.globalparts.com/orders/confirm"
+      protocol: EDI-X12-855
+    explain:
+      what: "供應商透過 EDI 確認訂單"
+
+  - id: manufacture
+    type: system
+    purpose: Production line manufactures the parts
+    pool: "GlobalParts Ltd"
+    lane: "Production"
+    explain:
+      what: "生產線製造零件"
+
+  - id: quality_check
+    type: human
+    purpose: QA inspector validates product quality
+    pool: "GlobalParts Ltd"
+    lane: "QA"
+    explain:
+      what: "品管人員驗證產品品質"
+
+  - id: logistics_company
+    type: company
+    purpose: Logistics partner handles shipping
+    company:
+      name: "SwiftShip Logistics"
+      role: partner
+      contact: "dispatch@swiftship.com"
+      sla: "3-day delivery"
+    explain:
+      what: "物流夥伴負責出貨運送"
+
+  - id: ship_goods
+    type: api
+    purpose: Generate shipping label and dispatch
+    pool: "SwiftShip Logistics"
+    runtime:
+      method: POST
+      url: "https://api.swiftship.com/shipments"
+    explain:
+      what: "產生託運單並發貨"
+
+  - id: receive_goods
+    type: human
+    purpose: Buyer warehouse receives and inspects goods
+    pool: "Acme Corp"
+    lane: "Warehouse"
+    explain:
+      what: "採購方倉庫收貨並驗收"
+
+  - id: process_payment
+    type: api
+    purpose: Buyer processes payment to supplier
+    pool: "Acme Corp"
+    lane: "Finance"
+    runtime:
+      method: POST
+      url: "https://banking.acme.com/transfer"
+    explain:
+      what: "採購方財務部匯款給供應商"
+
+edges:
+  - from: buyer_company
+    to: review_po
+    mode: sequential
+
+  - from: review_po
+    to: supplier_company
+    mode: message
+    label: "Purchase Order (EDI 850)"
+    protocol: EDI
+    sla: "48h response"
+
+  - from: supplier_company
+    to: confirm_order
+    mode: sequential
+
+  - from: confirm_order
+    to: manufacture
+    mode: sequential
+
+  - from: manufacture
+    to: quality_check
+    mode: sequential
+
+  - from: quality_check
+    to: logistics_company
+    mode: message
+    label: "Shipping Request"
+
+  - from: logistics_company
+    to: ship_goods
+    mode: sequential
+
+  - from: ship_goods
+    to: receive_goods
+    mode: message
+    label: "Advance Shipping Notice (EDI 856)"
+
+  - from: receive_goods
+    to: process_payment
+    mode: conditional
+    when: "inspection_passed == true"
+    label: "Goods accepted"

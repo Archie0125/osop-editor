@@ -1,0 +1,77 @@
+{
+  "app.title": "OSOP エディタ",
+  "app.subtitle": "プロセスオペレーティングシステム v1.0",
+
+  "button.run": "実行",
+  "button.open": "開く",
+  "button.save": ".osop 保存",
+  "button.examples": "サンプル",
+  "button.aiGenerate": "AI 生成",
+  "button.generate": "生成",
+  "button.generating": "生成中...",
+
+  "tooltip.openFile": ".osop ファイルを開く",
+  "tooltip.saveFile": ".osop ファイルとして保存",
+  "tooltip.loadExamples": "サンプル .osop ファイルを読み込む",
+  "tooltip.aiGenerate": "AI で説明から .osop を生成",
+
+  "ai.describePrompt": "任意の言語でワークフローを説明してください：",
+  "ai.placeholder": "例：ECサイトの返品フローを設計して、カスタマーサービスの審査、倉庫検収、返金を含めて...",
+
+  "tab.graph": "グラフビュー",
+  "tab.story": "ストーリービュー",
+  "tab.role": "ロールビュー",
+  "tab.agent": "エージェントビュー",
+  "tab.mcp": "MCP / CLI コード",
+
+  "template.placeholder": "-- 組み込みテンプレート --",
+
+  "error.invalidYaml": "無効な OSOP YAML フォーマットです。",
+  "error.loadExample": "サンプルの読み込みに失敗しました：{filename}",
+  "error.aiGeneration": "AI 生成に失敗しました",
+  "message.fixYaml": "YAML エラーを修正して視覚化を表示してください。",
+
+  "editor.placeholder": ".osop ファイルをここにドラッグ＆ドロップ、または開くボタンを使用...",
+
+  "example.esgPipeline": "ESG PDF パイプライン",
+  "example.conditionalApproval": "条件付き承認 (IF/ELSE)",
+  "example.multiAgent": "マルチエージェント協調",
+  "example.cicdRelease": "CI/CD リリースパイプライン",
+  "example.retryLoop": "リトライループ",
+  "example.fallbackError": "フォールバックエラー処理",
+  "example.b2bSupplyChain": "B2B サプライチェーン（企業ノード）",
+
+  "graph.inputs": "入力",
+  "graph.outputs": "出力",
+
+  "story.title": "フローストーリー：{name}",
+  "story.step": "ステップ {number}",
+  "story.receives": "受信：",
+  "story.produces": "出力：",
+  "story.runtime": "ランタイム：",
+  "story.if": "もし",
+  "story.then": "ならば",
+  "story.goTo": "へ移動",
+  "story.loopIf": "ループ条件",
+  "story.returnTo": "に戻る",
+  "story.onError": "エラー時",
+  "story.fallbackTo": "フォールバック先",
+  "story.parallel": "並列",
+  "story.start": "開始",
+  "story.next": "次へ",
+
+  "role.suffix": "ロール",
+
+  "agent.header": "# OSOP エージェント実行用圧縮コンテキスト",
+
+  "mcp.title": "OSOP MCP サーバー & CLI スケルトン",
+  "mcp.section1": "# 1. osop-mcp-server/server.py (Python MCP サーバー)",
+  "mcp.section2": "# 2. osop-cli/index.ts (Node.js CLI)",
+
+  "tab.ledger": "実行記録",
+  "button.running": "実行中...",
+
+  "lang.en": "English",
+  "lang.zhTW": "繁體中文",
+  "lang.ja": "日本語"
+}

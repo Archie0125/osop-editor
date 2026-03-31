@@ -1,0 +1,77 @@
+{
+  "app.title": "OSOP Editor",
+  "app.subtitle": "Process Operating System v1.0",
+
+  "button.run": "Run",
+  "button.open": "Open",
+  "button.save": "Save .osop",
+  "button.examples": "Examples",
+  "button.aiGenerate": "AI Generate",
+  "button.generate": "Generate",
+  "button.generating": "Generating...",
+
+  "tooltip.openFile": "Open .osop file",
+  "tooltip.saveFile": "Save as .osop file",
+  "tooltip.loadExamples": "Load example .osop files",
+  "tooltip.aiGenerate": "AI Generate .osop from description",
+
+  "ai.describePrompt": "Describe your workflow in any language:",
+  "ai.placeholder": "e.g. Design a return workflow with customer service review, warehouse inspection, refund...",
+
+  "tab.graph": "Graph View",
+  "tab.story": "Story View",
+  "tab.role": "Role View",
+  "tab.agent": "Agent View",
+  "tab.mcp": "MCP / CLI Code",
+
+  "template.placeholder": "-- Built-in Templates --",
+
+  "error.invalidYaml": "Invalid OSOP YAML format.",
+  "error.loadExample": "Failed to load example: {filename}",
+  "error.aiGeneration": "AI generation failed",
+  "message.fixYaml": "Please fix YAML errors to view the visualization.",
+
+  "editor.placeholder": "Drag & drop a .osop file here, or use Open button...",
+
+  "example.esgPipeline": "ESG PDF Pipeline",
+  "example.conditionalApproval": "Conditional Approval (IF/ELSE)",
+  "example.multiAgent": "Multi-Agent Collaboration",
+  "example.cicdRelease": "CI/CD Release Pipeline",
+  "example.retryLoop": "Retry Loop",
+  "example.fallbackError": "Fallback Error Handling",
+  "example.b2bSupplyChain": "B2B Supply Chain (Company Nodes)",
+
+  "graph.inputs": "Inputs",
+  "graph.outputs": "Outputs",
+
+  "story.title": "The Story of: {name}",
+  "story.step": "Step {number}",
+  "story.receives": "Receives:",
+  "story.produces": "Produces:",
+  "story.runtime": "Runtime:",
+  "story.if": "IF",
+  "story.then": "THEN",
+  "story.goTo": "go to",
+  "story.loopIf": "LOOP IF",
+  "story.returnTo": "return to",
+  "story.onError": "ON ERROR",
+  "story.fallbackTo": "fallback to",
+  "story.parallel": "PARALLEL",
+  "story.start": "start",
+  "story.next": "NEXT",
+
+  "role.suffix": "Role",
+
+  "agent.header": "# OSOP Compressed Context for Agent Execution",
+
+  "mcp.title": "OSOP MCP Server & CLI Skeleton",
+  "mcp.section1": "# 1. osop-mcp-server/server.py (Python MCP Server)",
+  "mcp.section2": "# 2. osop-cli/index.ts (Node.js CLI)",
+
+  "tab.ledger": "Ledger",
+  "button.running": "Running...",
+
+  "lang.en": "English",
+  "lang.zhTW": "繁體中文",
+  "lang.ja": "日本語"
+}

@@ -4,8 +4,14 @@ import { z } from 'zod';
 // 1. Definition Layer (The OSOP AST)
 // ==========================================
 
-export type NodeType = 'human' | 'agent' | 'api' | 'cli' | 'db' | 'git' | 'docker' | 'cicd' | 'mcp' | 'system';
-export type EdgeMode = 'sequential' | 'conditional' | 'parallel' | 'loop' | 'event';
+export type NodeType =
+  | 'human' | 'agent' | 'api' | 'cli' | 'db' | 'git' | 'docker' | 'cicd' | 'mcp' | 'system'
+  | 'infra' | 'company' | 'department' | 'event' | 'gateway' | 'data';
+
+export type EdgeMode =
+  | 'sequential' | 'conditional' | 'parallel' | 'loop' | 'event'
+  | 'fallback' | 'error' | 'timeout' | 'compensation'
+  | 'message' | 'dataflow' | 'signal' | 'weighted';
 
 export interface IOSOPNode {
   id: string;

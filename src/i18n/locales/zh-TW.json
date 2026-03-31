@@ -1,0 +1,77 @@
+{
+  "app.title": "OSOP 編輯器",
+  "app.subtitle": "流程作業系統 v1.0",
+
+  "button.run": "執行",
+  "button.open": "開啟",
+  "button.save": "儲存 .osop",
+  "button.examples": "範例",
+  "button.aiGenerate": "AI 生成",
+  "button.generate": "生成",
+  "button.generating": "生成中...",
+
+  "tooltip.openFile": "開啟 .osop 檔案",
+  "tooltip.saveFile": "另存為 .osop 檔案",
+  "tooltip.loadExamples": "載入範例 .osop 檔案",
+  "tooltip.aiGenerate": "用 AI 從描述生成 .osop",
+
+  "ai.describePrompt": "用任何語言描述你的流程：",
+  "ai.placeholder": "例如：幫我設計一個電商退貨流程，包含客服審核、倉庫驗收、退款...",
+
+  "tab.graph": "流程圖",
+  "tab.story": "故事視圖",
+  "tab.role": "角色視圖",
+  "tab.agent": "Agent 視圖",
+  "tab.mcp": "MCP / CLI 程式碼",
+
+  "template.placeholder": "-- 內建範本 --",
+
+  "error.invalidYaml": "無效的 OSOP YAML 格式。",
+  "error.loadExample": "載入範例失敗：{filename}",
+  "error.aiGeneration": "AI 生成失敗",
+  "message.fixYaml": "請修正 YAML 錯誤以檢視視覺化結果。",
+
+  "editor.placeholder": "拖放 .osop 檔案到此處，或使用開啟按鈕...",
+
+  "example.esgPipeline": "ESG PDF 管線",
+  "example.conditionalApproval": "條件審批 (IF/ELSE)",
+  "example.multiAgent": "多 Agent 協作",
+  "example.cicdRelease": "CI/CD 發布流程",
+  "example.retryLoop": "重試迴圈",
+  "example.fallbackError": "備援錯誤處理",
+  "example.b2bSupplyChain": "B2B 供應鏈（公司節點）",
+
+  "graph.inputs": "輸入",
+  "graph.outputs": "輸出",
+
+  "story.title": "流程故事：{name}",
+  "story.step": "步驟 {number}",
+  "story.receives": "接收：",
+  "story.produces": "產出：",
+  "story.runtime": "執行環境：",
+  "story.if": "如果",
+  "story.then": "則",
+  "story.goTo": "前往",
+  "story.loopIf": "迴圈條件",
+  "story.returnTo": "返回",
+  "story.onError": "錯誤時",
+  "story.fallbackTo": "備援至",
+  "story.parallel": "並行",
+  "story.start": "開始",
+  "story.next": "下一步",
+
+  "role.suffix": "角色",
+
+  "agent.header": "# OSOP Agent 執行壓縮上下文",
+
+  "mcp.title": "OSOP MCP 伺服器 & CLI 骨架",
+  "mcp.section1": "# 1. osop-mcp-server/server.py (Python MCP 伺服器)",
+  "mcp.section2": "# 2. osop-cli/index.ts (Node.js CLI)",
+
+  "tab.ledger": "執行記錄",
+  "button.running": "執行中...",
+
+  "lang.en": "English",
+  "lang.zhTW": "繁體中文",
+  "lang.ja": "日本語"
+}
