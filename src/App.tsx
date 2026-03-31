@@ -6,15 +6,12 @@ import { StoryView } from './components/StoryView';
 import { RoleView } from './components/RoleView';
 import { AgentView } from './components/AgentView';
 import { McpCliSkeleton } from './components/McpCliSkeleton';
-import { LedgerView } from './components/LedgerView';
-import { LayoutGrid, BookOpen, Users, Bot, TerminalSquare, Play, Clock, FileText, FolderOpen, Save, Download, ChevronDown, Sparkles, Loader2, Send, Globe, ScrollText, Square } from 'lucide-react';
+import { LayoutGrid, BookOpen, Users, Bot, TerminalSquare, Clock, FileText, FolderOpen, Save, Download, ChevronDown, Sparkles, Loader2, Send, Globe } from 'lucide-react';
 import { OSOP_TEMPLATES } from './lib/templates';
 import { generateOsopFromPrompt } from './lib/ai-generate';
-import { simulateWorkflow } from './lib/execution/simulator';
-import { WorkflowRunRecord } from './lib/execution/types';
 import { useT, LOCALE_OPTIONS } from './i18n';
 
-type TabType = 'graph' | 'story' | 'role' | 'agent' | 'ledger' | 'mcp';
+type TabType = 'graph' | 'story' | 'role' | 'agent' | 'mcp';
 
 const EXAMPLE_FILES = [
   { nameKey: 'example.esgPipeline', file: 'esg_pipeline.osop' },
@@ -39,10 +36,6 @@ export default function App() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runProgress, setRunProgress] = useState<string | null>(null);
-  const [lastRun, setLastRun] = useState<WorkflowRunRecord | null>(null);
-  const [runKey, setRunKey] = useState(0); // force LedgerView refresh
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -107,34 +100,6 @@ export default function App() {
       setAiError(err.message || t('error.aiGeneration'));
     } finally {
       setAiLoading(false);
-    }
-  };
-
-  // --- Run Simulation ---
-  const handleRun = async (mode: 'dry_run' | 'simulated' = 'simulated') => {
-    if (!workflow || isRunning) return;
-    setIsRunning(true);
-    setRunProgress('Starting...');
-    setLastRun(null);
-    try {
-      const result = await simulateWorkflow(workflow, yamlText, {
-        mode,
-        onNodeStart: (nodeId) => setRunProgress(`Running: ${nodeId}`),
-        onNodeComplete: (nodeId, nr) => {
-          setRunProgress(`${nr.status === 'COMPLETED' ? 'Done' : nr.status}: ${nodeId}`);
-        },
-        onProgress: (r) => setLastRun({ ...r }),
-      });
-      setLastRun(result);
-      setRunProgress(result.status === 'COMPLETED' ? 'Completed' : `Failed: ${result.error_summary}`);
-      setRunKey(k => k + 1);
-      // Auto-switch to ledger tab
-      setTimeout(() => setActiveTab('ledger'), 500);
-    } catch (err: any) {
-      setRunProgress(`Error: ${err.message}`);
-    } finally {
-      setIsRunning(false);
-      setTimeout(() => setRunProgress(null), 5000);
     }
   };
 
@@ -206,14 +171,7 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => handleRun('simulated')}
-                disabled={isRunning || !workflow}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors"
-              >
-                {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                {isRunning ? runProgress || 'Running...' : t('button.run')}
-              </button>
+              {/* Run button — Phase 2: AI agents generate .osoplog for replay */}
             </div>
           </div>
 
@@ -364,20 +322,6 @@ export default function App() {
             spellCheck={false}
             placeholder={t('editor.placeholder')}
           />
-          {runProgress && (
-            <div className={
-              "absolute bottom-8 left-0 right-0 p-2 text-xs font-mono border-t " +
-              (lastRun?.status === 'FAILED'
-                ? "bg-red-900/90 text-red-200 border-red-800"
-                : lastRun?.status === 'COMPLETED'
-                  ? "bg-emerald-900/90 text-emerald-200 border-emerald-800"
-                  : "bg-blue-900/90 text-blue-200 border-blue-800")
-            }>
-              {isRunning && <Loader2 className="w-3 h-3 animate-spin inline mr-2" />}
-              {runProgress}
-              {lastRun?.duration_ms != null && ` (${(lastRun.duration_ms / 1000).toFixed(1)}s)`}
-            </div>
-          )}
           {error && (
             <div className="absolute bottom-0 left-0 right-0 bg-red-900/90 text-red-200 p-2 text-xs font-mono border-t border-red-800">
               {error}
@@ -394,7 +338,6 @@ export default function App() {
           <TabButton active={activeTab === 'story'} onClick={() => setActiveTab('story')} icon={<BookOpen className="w-4 h-4" />} label={t('tab.story')} />
           <TabButton active={activeTab === 'role'} onClick={() => setActiveTab('role')} icon={<Users className="w-4 h-4" />} label={t('tab.role')} />
           <TabButton active={activeTab === 'agent'} onClick={() => setActiveTab('agent')} icon={<Bot className="w-4 h-4" />} label={t('tab.agent')} />
-          <TabButton active={activeTab === 'ledger'} onClick={() => setActiveTab('ledger')} icon={<ScrollText className="w-4 h-4" />} label={t('tab.ledger')} />
           <div className="flex-1" />
           <TabButton active={activeTab === 'mcp'} onClick={() => setActiveTab('mcp')} icon={<TerminalSquare className="w-4 h-4" />} label={t('tab.mcp')} />
         </div>
@@ -427,7 +370,6 @@ export default function App() {
                 {activeTab === 'story' && <StoryView workflow={workflow} />}
                 {activeTab === 'role' && <RoleView workflow={workflow} />}
                 {activeTab === 'agent' && <AgentView workflow={workflow} />}
-                {activeTab === 'ledger' && <LedgerView workflow={workflow} />}
                 {activeTab === 'mcp' && <McpCliSkeleton />}
               </div>
             </>
