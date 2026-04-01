@@ -1,0 +1,179 @@
+osop_version: "1.0"
+id: risk-analysis-demo
+name: "Production Deployment with Risk Metadata"
+description: "Demonstrates OSOP security metadata: risk levels, approval gates, permissions, secrets, and cost tracking. Toggle the Risk button to see the analysis."
+version: "1.0.0"
+owner: osop-team
+visibility: public
+tags: [demo, security, risk-analysis, deployment]
+
+nodes:
+  - id: trigger
+    type: event
+    name: "Release Tag Pushed"
+    purpose: "Git tag push triggers the deployment pipeline"
+    security:
+      risk_level: low
+
+  - id: build
+    type: docker
+    subtype: build
+    name: "Build Docker Image"
+    purpose: "Build and tag container image from Dockerfile"
+    runtime:
+      command: "docker build -t app:${VERSION} ."
+    security:
+      permissions: ["read:source"]
+      risk_level: low
+    timeout_sec: 300
+
+  - id: scan
+    type: cicd
+    subtype: test
+    name: "Security Scan"
+    purpose: "Run Trivy vulnerability scanner on the image"
+    runtime:
+      command: "trivy image app:${VERSION}"
+    security:
+      permissions: ["read:images"]
+      risk_level: low
+    timeout_sec: 120
+
+  - id: test
+    type: cicd
+    subtype: test
+    name: "Integration Tests"
+    purpose: "Run full integration test suite against staging"
+    security:
+      permissions: ["read:staging-db"]
+      secrets: ["STAGING_DB_URL"]
+      risk_level: medium
+    timeout_sec: 600
+    retry_policy:
+      max_retries: 2
+      strategy: exponential_backoff
+      backoff_sec: 10
+
+  - id: approval
+    type: human
+    subtype: approval
+    name: "Tech Lead Approval"
+    purpose: "Human review gate before production deployment"
+    role: tech-lead
+    approval_gate:
+      required: true
+      approver_role: tech-lead
+      timeout_hours: 24
+    security:
+      risk_level: low
+
+  - id: deploy-prod
+    type: infra
+    subtype: deploy
+    name: "Deploy to Production"
+    purpose: "Apply Kubernetes deployment to production cluster"
+    runtime:
+      command: "kubectl apply -f k8s/production/"
+    security:
+      permissions: ["write:k8s-production", "read:secrets"]
+      secrets: ["KUBE_TOKEN", "REGISTRY_CREDS"]
+      risk_level: critical
+    cost:
+      estimated: 2.50
+      currency: USD
+      budget_ref: "infra-budget-2026"
+    timeout_sec: 180
+
+  - id: healthcheck
+    type: api
+    subtype: rest
+    name: "Health Check"
+    purpose: "Verify production deployment is healthy"
+    runtime:
+      endpoint: "https://api.example.com/health"
+      method: GET
+    security:
+      risk_level: low
+    timeout_sec: 30
+
+  - id: rollback
+    type: infra
+    name: "Emergency Rollback"
+    purpose: "Roll back to previous version if health check fails"
+    runtime:
+      command: "kubectl rollout undo deployment/app -n production"
+    security:
+      permissions: ["write:k8s-production"]
+      secrets: ["KUBE_TOKEN"]
+      risk_level: high
+    approval_gate:
+      required: true
+      approver_role: tech-lead
+
+  - id: notify
+    type: api
+    subtype: webhook
+    name: "Notify Team"
+    purpose: "Send deployment notification to Slack"
+    runtime:
+      endpoint: "${SLACK_WEBHOOK_URL}"
+      method: POST
+    security:
+      permissions: ["write:slack"]
+      secrets: ["SLACK_WEBHOOK_URL"]
+      risk_level: low
+
+  - id: dangerous-cleanup
+    type: cli
+    name: "Cleanup Old Images"
+    purpose: "Remove old Docker images from registry (intentionally risky for demo)"
+    runtime:
+      command: "docker system prune -af --volumes"
+    security:
+      risk_level: low
+    cost:
+      estimated: 0.10
+      currency: USD
+
+edges:
+  - from: trigger
+    to: build
+    mode: sequential
+
+  - from: build
+    to: scan
+    mode: sequential
+
+  - from: scan
+    to: test
+    mode: sequential
+
+  - from: test
+    to: approval
+    mode: sequential
+
+  - from: approval
+    to: deploy-prod
+    mode: sequential
+
+  - from: deploy-prod
+    to: healthcheck
+    mode: sequential
+
+  - from: healthcheck
+    to: notify
+    mode: sequential
+    label: "Healthy"
+
+  - from: healthcheck
+    to: rollback
+    mode: fallback
+    label: "Health check failed"
+
+  - from: rollback
+    to: notify
+    mode: sequential
+
+  - from: deploy-prod
+    to: dangerous-cleanup
+    mode: sequential

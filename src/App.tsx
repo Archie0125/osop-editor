@@ -34,6 +34,7 @@ const EXAMPLE_FILES = [
   { nameKey: 'example.weeklyReport', file: 'weekly_report.osop' },
   { nameKey: 'example.bugTriage', file: 'bug_triage.osop' },
   { nameKey: 'example.agentResearch', file: 'agent_research.osop' },
+  { nameKey: 'example.riskDemo', file: 'risk_analysis_demo.osop' },
 ];
 
 export default function App() {
