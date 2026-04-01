@@ -1,0 +1,98 @@
+osop_version: "1.0"
+id: "contributing-osop-editor"
+name: "Contributing to OSOP Editor"
+description: "How to contribute features, bug fixes, or view components to the OSOP visual editor."
+version: "1.0.0"
+status: "active"
+usage: "reference"
+tags: [meta, dogfooding, contributing, editor, react]
+
+nodes:
+  - id: "setup-dev"
+    type: "cli"
+    subtype: "script"
+    name: "Setup Dev Environment"
+    description: "Clone repo, run npm install, start dev server with npm run dev."
+    timeout_sec: 120
+
+  - id: "fork-branch"
+    type: "git"
+    subtype: "branch"
+    name: "Fork & Create Branch"
+    description: "Fork the repo and create a feature branch."
+
+  - id: "implement"
+    type: "human"
+    name: "Implement Changes"
+    description: "Write your feature or fix. Stack: React 19, Vite 6, TypeScript 5.8, Tailwind CSS, @xyflow/react."
+
+  - id: "type-check"
+    type: "cicd"
+    subtype: "test"
+    name: "TypeScript Check"
+    description: "Run npx tsc --noEmit to verify type safety."
+    timeout_sec: 60
+
+  - id: "build"
+    type: "cicd"
+    subtype: "test"
+    name: "Build"
+    description: "Run npx vite build to verify the production build succeeds."
+    timeout_sec: 120
+
+  - id: "visual-qa"
+    type: "human"
+    subtype: "review"
+    name: "Visual QA"
+    description: "Test your changes in the browser. Verify all 8 view tabs still work: Graph, Story, Role, Agent, MCP, Ledger, Risk, Report."
+
+  - id: "submit-pr"
+    type: "git"
+    subtype: "pr"
+    name: "Submit PR"
+    description: "Create PR with screenshots of visual changes."
+
+  - id: "review"
+    type: "human"
+    subtype: "review"
+    name: "Code Review"
+    description: "Maintainer reviews code quality, TypeScript types, and visual consistency."
+    approval_gate:
+      required: true
+      min_approvals: 1
+
+  - id: "merge"
+    type: "git"
+    subtype: "commit"
+    name: "Merge & Deploy"
+    description: "Squash merge. Vercel auto-deploys to osop-editor.vercel.app."
+
+edges:
+  - from: "setup-dev"
+    to: "fork-branch"
+    mode: "sequential"
+  - from: "fork-branch"
+    to: "implement"
+    mode: "sequential"
+  - from: "implement"
+    to: "type-check"
+    mode: "sequential"
+  - from: "type-check"
+    to: "build"
+    mode: "sequential"
+  - from: "type-check"
+    to: "implement"
+    mode: "fallback"
+    label: "Type errors — fix"
+  - from: "build"
+    to: "visual-qa"
+    mode: "sequential"
+  - from: "visual-qa"
+    to: "submit-pr"
+    mode: "sequential"
+  - from: "submit-pr"
+    to: "review"
+    mode: "sequential"
+  - from: "review"
+    to: "merge"
+    mode: "sequential"

@@ -297,6 +297,8 @@ export interface OsopWorkflow {
   owner?: string;
   visibility?: 'public' | 'private';
   tags?: string[];
+  status?: 'draft' | 'active' | 'deprecated' | 'template';
+  usage?: 'plan' | 'execution' | 'template' | 'reference';
 
   metadata?: OsopMetadata;
   nodes: OsopNode[];
