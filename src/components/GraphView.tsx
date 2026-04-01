@@ -8,6 +8,7 @@ interface GraphViewProps {
   workflow: OsopWorkflow;
   riskReport?: WorkflowRiskReport | null;
   riskOverlay?: boolean;
+  executionNodeId?: string | null;
 }
 
 const NODE_COLORS: Record<string, { bg: string; border: string; badge: string; text: string }> = {
@@ -51,6 +52,7 @@ const EDGE_STYLES: Record<string, { stroke: string; strokeDasharray?: string; an
   dataflow:     { stroke: '#14b8a6', strokeDasharray: '4 4' },
   signal:       { stroke: '#a855f7', strokeDasharray: '6 6', animated: true },
   weighted:     { stroke: '#0ea5e9', strokeDasharray: '3 2' },
+  spawn:        { stroke: '#a855f7', strokeDasharray: '4 2', animated: true },
 };
 
 const RISK_BORDER: Record<string, string> = {
@@ -75,11 +77,13 @@ const CustomNode = ({ data }: any) => {
   const riskLevel = data.riskLevel as string | undefined;
   const riskFindings = data.riskFindings as number | undefined;
   const showRisk = data.riskOverlay && riskLevel;
+  const isExecActive = data.isExecutionActive as boolean | undefined;
   const riskBorder = showRisk ? (RISK_BORDER[riskLevel!] || '') : '';
-  const companyRing = !showRisk && isCompany ? 'ring-2 ring-amber-300/50' : '';
+  const execBorder = !showRisk && isExecActive ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-200' : '';
+  const companyRing = !showRisk && !isExecActive && isCompany ? 'ring-2 ring-amber-300/50' : '';
 
   return (
-    <div className={`${colors.bg} border-2 ${showRisk ? '' : colors.border} rounded-lg shadow-sm w-60 text-sm ${riskBorder} ${companyRing} relative`}>
+    <div className={`${colors.bg} border-2 ${showRisk ? '' : colors.border} rounded-lg shadow-sm w-60 text-sm ${riskBorder} ${execBorder} ${companyRing} relative transition-all`}>
       <Handle type="target" position={Position.Top} className="w-2 h-2 bg-slate-400" />
 
       {/* Risk badge overlay */}
@@ -138,7 +142,7 @@ const CustomNode = ({ data }: any) => {
   );
 };
 
-export function GraphView({ workflow, riskReport, riskOverlay }: GraphViewProps) {
+export function GraphView({ workflow, riskReport, riskOverlay, executionNodeId }: GraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
@@ -169,6 +173,7 @@ export function GraphView({ workflow, riskReport, riskOverlay }: GraphViewProps)
           riskOverlay: riskOverlay,
           riskLevel: riskInfo?.level,
           riskFindings: riskInfo?.findings,
+          isExecutionActive: executionNodeId === node.id,
         },
         type: 'custom',
       };
@@ -192,7 +197,7 @@ export function GraphView({ workflow, riskReport, riskOverlay }: GraphViewProps)
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [workflow, riskOverlay, riskScoreMap, setNodes, setEdges]);
+  }, [workflow, riskOverlay, riskScoreMap, executionNodeId, setNodes, setEdges]);
 
   return (
     <div className="w-full h-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">

@@ -57,7 +57,9 @@ export type OsopEdgeMode =
   | 'dataflow'      // Data movement (separate from control)
   | 'signal'        // External hold/release gate
   // Distribution
-  | 'weighted';     // Percentage-based routing (A/B, canary)
+  | 'weighted'      // Percentage-based routing (A/B, canary)
+  // Agent orchestration
+  | 'spawn';        // Parent spawns child agent(s)
 
 // --- Node Definition ---
 
@@ -161,6 +163,14 @@ export interface OsopNode {
   // Optional node (can be skipped without failure)
   optional?: boolean;
 
+  // Sub-agent orchestration (OSP-0001)
+  parent?: string;              // Parent node ID that spawns this agent
+  spawn_policy?: {
+    max_children?: number;
+    child_tools?: string[];
+    can_spawn_children?: boolean;
+  };
+
   // Security (node-level)
   security?: {
     permissions?: string[];
@@ -215,6 +225,9 @@ export interface OsopEdge {
 
   // Compensation target (saga pattern)
   compensates?: string;       // node_id this edge undoes
+
+  // Agent orchestration
+  spawn_count?: number;       // Number of child agents to spawn (default 1)
 }
 
 // --- Metadata ---

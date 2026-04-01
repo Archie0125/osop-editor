@@ -42,6 +42,22 @@ export interface NodeRunRecord {
     decision?: string;
     notes?: string;
   };
+  // Sub-agent tracking (OSP-0001)
+  parent_id?: string;
+  spawn_index?: number;
+  isolation?: string;
+  // Enhanced tool logging (OSP-0002)
+  tools_used?: Array<{
+    tool: string;
+    calls: number;
+    details?: Array<Record<string, any>>;
+  }>;
+  reasoning?: {
+    question?: string;
+    alternatives?: Array<{ id: string; description: string }>;
+    selected?: string;
+    confidence?: number;
+  };
 }
 
 // --- Workflow Run Record ---

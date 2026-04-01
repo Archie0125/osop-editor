@@ -7,14 +7,18 @@ import { RoleView } from './components/RoleView';
 import { AgentView } from './components/AgentView';
 import { McpCliSkeleton } from './components/McpCliSkeleton';
 import { RiskPanel } from './components/RiskPanel';
-import { LayoutGrid, BookOpen, Users, Bot, TerminalSquare, Clock, FileText, FolderOpen, Save, Download, ChevronDown, Sparkles, Loader2, Send, Globe, FileOutput, ShieldAlert } from 'lucide-react';
+import { LedgerView } from './components/LedgerView';
+import { LayoutGrid, BookOpen, Users, Bot, TerminalSquare, Clock, FileText, FolderOpen, Save, Download, ChevronDown, Sparkles, Loader2, Send, Globe, FileOutput, ShieldAlert, ScrollText } from 'lucide-react';
 import { OSOP_TEMPLATES } from './lib/templates';
 import { generateOsopFromPrompt } from './lib/ai-generate';
 import { generateHtmlReport } from './lib/report/html-report';
 import { analyzeWorkflowRisk, WorkflowRiskReport } from './lib/risk';
+import { parseOsopLog, isOsopLogFile } from './lib/execution/log-parser';
+import { WorkflowRunRecord } from './lib/execution/types';
+import { runStore } from './lib/execution/store';
 import { useT, LOCALE_OPTIONS } from './i18n';
 
-type TabType = 'graph' | 'story' | 'role' | 'agent' | 'mcp';
+type TabType = 'graph' | 'story' | 'role' | 'agent' | 'mcp' | 'ledger';
 
 const EXAMPLE_FILES = [
   { nameKey: 'example.esgPipeline', file: 'esg_pipeline.osop' },
@@ -52,6 +56,8 @@ export default function App() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [riskOverlay, setRiskOverlay] = useState(false);
   const [showRiskPanel, setShowRiskPanel] = useState(false);
+  const [importedRun, setImportedRun] = useState<WorkflowRunRecord | null>(null);
+  const [playbackNodeId, setPlaybackNodeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,9 +91,20 @@ export default function App() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setYamlText(ev.target?.result as string);
-      setFileName(file.name);
-      setSelectedTemplateId('');
+      const content = ev.target?.result as string;
+      if (isOsopLogFile(file.name)) {
+        const run = parseOsopLog(content);
+        if (run) {
+          setImportedRun(run);
+          runStore.saveRun(run);
+          setActiveTab('ledger');
+          setFileName(file.name);
+        }
+      } else {
+        setYamlText(content);
+        setFileName(file.name);
+        setSelectedTemplateId('');
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -156,7 +173,20 @@ export default function App() {
     e.preventDefault();
     e.stopPropagation();
     const file = e.dataTransfer.files?.[0];
-    if (file && (file.name.endsWith('.osop') || file.name.endsWith('.yaml') || file.name.endsWith('.yml'))) {
+    if (!file) return;
+    if (isOsopLogFile(file.name)) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const run = parseOsopLog(ev.target?.result as string);
+        if (run) {
+          setImportedRun(run);
+          runStore.saveRun(run);
+          setActiveTab('ledger');
+          setFileName(file.name);
+        }
+      };
+      reader.readAsText(file);
+    } else if (file.name.endsWith('.osop') || file.name.endsWith('.yaml') || file.name.endsWith('.yml')) {
       const reader = new FileReader();
       reader.onload = (ev) => {
         setYamlText(ev.target?.result as string);
@@ -173,7 +203,7 @@ export default function App() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".osop,.osop.yaml,.osop.yml,.yaml,.yml"
+        accept=".osop,.osop.yaml,.osop.yml,.osoplog,.osoplog.yaml,.yaml,.yml"
         onChange={handleFileSelected}
         className="hidden"
       />
@@ -382,6 +412,7 @@ export default function App() {
           <TabButton active={activeTab === 'role'} onClick={() => setActiveTab('role')} icon={<Users className="w-4 h-4" />} label={t('tab.role')} />
           <TabButton active={activeTab === 'agent'} onClick={() => setActiveTab('agent')} icon={<Bot className="w-4 h-4" />} label={t('tab.agent')} />
           <div className="flex-1" />
+          <TabButton active={activeTab === 'ledger'} onClick={() => setActiveTab('ledger')} icon={<ScrollText className="w-4 h-4" />} label="Ledger" />
           {/* Risk Analysis Toggle */}
           <button
             onClick={() => { setShowRiskPanel(!showRiskPanel); setRiskOverlay(!showRiskPanel); }}
@@ -434,10 +465,11 @@ export default function App() {
               )}
               <div className="flex-1 overflow-hidden relative flex">
                 <div className={`${showRiskPanel ? 'flex-1' : 'w-full'} overflow-hidden`}>
-                  {activeTab === 'graph' && <GraphView workflow={workflow} riskReport={riskReport} riskOverlay={riskOverlay} />}
+                  {activeTab === 'graph' && <GraphView workflow={workflow} riskReport={riskReport} riskOverlay={riskOverlay} executionNodeId={playbackNodeId} />}
                   {activeTab === 'story' && <StoryView workflow={workflow} />}
                   {activeTab === 'role' && <RoleView workflow={workflow} />}
                   {activeTab === 'agent' && <AgentView workflow={workflow} />}
+                  {activeTab === 'ledger' && <LedgerView workflow={workflow} importedRun={importedRun} onStepChange={(_step, nodeId) => setPlaybackNodeId(nodeId)} />}
                   {activeTab === 'mcp' && <McpCliSkeleton />}
                 </div>
                 {showRiskPanel && riskReport && (
