@@ -2,9 +2,12 @@ import React, { useEffect, useMemo } from 'react';
 import { ReactFlow, Background, Controls, Node, Edge, useNodesState, useEdgesState, Handle, Position } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { OsopWorkflow, OsopNodeType } from '../types/osop';
+import type { WorkflowRiskReport } from '../lib/risk';
 
 interface GraphViewProps {
   workflow: OsopWorkflow;
+  riskReport?: WorkflowRiskReport | null;
+  riskOverlay?: boolean;
 }
 
 const NODE_COLORS: Record<string, { bg: string; border: string; badge: string; text: string }> = {
@@ -50,16 +53,44 @@ const EDGE_STYLES: Record<string, { stroke: string; strokeDasharray?: string; an
   weighted:     { stroke: '#0ea5e9', strokeDasharray: '3 2' },
 };
 
+const RISK_BORDER: Record<string, string> = {
+  critical: 'ring-2 ring-red-500 border-red-500',
+  high:     'ring-2 ring-orange-400 border-orange-400',
+  medium:   'ring-1 ring-yellow-400 border-yellow-400',
+  low:      '',
+};
+
+const RISK_BADGE_COLORS: Record<string, string> = {
+  critical: 'bg-red-600 text-white animate-pulse',
+  high:     'bg-orange-600 text-white',
+  medium:   'bg-yellow-600 text-white',
+  low:      'bg-slate-500 text-white',
+};
+
 const CustomNode = ({ data }: any) => {
   const colors = NODE_COLORS[data.type] || NODE_COLORS.system;
   const icon = NODE_ICONS[data.type] || '\u{2699}';
   const isCompany = data.type === 'company' || data.type === 'department';
 
+  const riskLevel = data.riskLevel as string | undefined;
+  const riskFindings = data.riskFindings as number | undefined;
+  const showRisk = data.riskOverlay && riskLevel;
+  const riskBorder = showRisk ? (RISK_BORDER[riskLevel!] || '') : '';
+  const companyRing = !showRisk && isCompany ? 'ring-2 ring-amber-300/50' : '';
+
   return (
-    <div className={`${colors.bg} border-2 ${colors.border} rounded-lg shadow-sm w-60 text-sm ${isCompany ? 'ring-2 ring-amber-300/50' : ''}`}>
+    <div className={`${colors.bg} border-2 ${showRisk ? '' : colors.border} rounded-lg shadow-sm w-60 text-sm ${riskBorder} ${companyRing} relative`}>
       <Handle type="target" position={Position.Top} className="w-2 h-2 bg-slate-400" />
 
-      <div className={`p-2.5 border-b ${colors.border} flex items-center gap-2 rounded-t-lg`}>
+      {/* Risk badge overlay */}
+      {showRisk && riskLevel !== 'low' && (
+        <div className={`absolute -top-2 -right-2 z-10 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full ${RISK_BADGE_COLORS[riskLevel!] || ''}`}>
+          {riskLevel}
+          {riskFindings ? ` (${riskFindings})` : ''}
+        </div>
+      )}
+
+      <div className={`p-2.5 border-b ${showRisk ? '' : colors.border} flex items-center gap-2 rounded-t-lg`}>
         <span className="text-lg">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className={`font-bold ${colors.text} truncate text-xs`}>{data.label}</div>
@@ -107,25 +138,41 @@ const CustomNode = ({ data }: any) => {
   );
 };
 
-export function GraphView({ workflow }: GraphViewProps) {
+export function GraphView({ workflow, riskReport, riskOverlay }: GraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
 
+  // Build a lookup for risk scores per node
+  const riskScoreMap = useMemo(() => {
+    if (!riskReport) return new Map<string, { level: string; findings: number }>();
+    const map = new Map<string, { level: string; findings: number }>();
+    for (const ns of riskReport.node_scores) {
+      map.set(ns.node_id, { level: ns.risk_level, findings: ns.findings.length });
+    }
+    return map;
+  }, [riskReport]);
+
   useEffect(() => {
-    const newNodes: Node[] = workflow.nodes.map((node, index) => ({
-      id: node.id,
-      position: { x: 300 * (index % 4) + 50, y: 200 * Math.floor(index / 4) + 50 },
-      data: {
-        label: node.name || node.id,
-        type: node.type,
-        purpose: node.purpose,
-        inputs: node.inputs,
-        outputs: node.outputs,
-        company: node.company,
-      },
-      type: 'custom',
-    }));
+    const newNodes: Node[] = workflow.nodes.map((node, index) => {
+      const riskInfo = riskScoreMap.get(node.id);
+      return {
+        id: node.id,
+        position: { x: 300 * (index % 4) + 50, y: 200 * Math.floor(index / 4) + 50 },
+        data: {
+          label: node.name || node.id,
+          type: node.type,
+          purpose: node.purpose,
+          inputs: node.inputs,
+          outputs: node.outputs,
+          company: node.company,
+          riskOverlay: riskOverlay,
+          riskLevel: riskInfo?.level,
+          riskFindings: riskInfo?.findings,
+        },
+        type: 'custom',
+      };
+    });
 
     const newEdges: Edge[] = workflow.edges.map((edge) => {
       const mode = edge.mode || 'sequential';
@@ -145,7 +192,7 @@ export function GraphView({ workflow }: GraphViewProps) {
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [workflow, setNodes, setEdges]);
+  }, [workflow, riskOverlay, riskScoreMap, setNodes, setEdges]);
 
   return (
     <div className="w-full h-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">

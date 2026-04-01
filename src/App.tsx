@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { parseOsop } from './lib/osop-parser';
 import { OsopWorkflow } from './types/osop';
 import { GraphView } from './components/GraphView';
@@ -6,9 +6,12 @@ import { StoryView } from './components/StoryView';
 import { RoleView } from './components/RoleView';
 import { AgentView } from './components/AgentView';
 import { McpCliSkeleton } from './components/McpCliSkeleton';
-import { LayoutGrid, BookOpen, Users, Bot, TerminalSquare, Clock, FileText, FolderOpen, Save, Download, ChevronDown, Sparkles, Loader2, Send, Globe } from 'lucide-react';
+import { RiskPanel } from './components/RiskPanel';
+import { LayoutGrid, BookOpen, Users, Bot, TerminalSquare, Clock, FileText, FolderOpen, Save, Download, ChevronDown, Sparkles, Loader2, Send, Globe, FileOutput, ShieldAlert } from 'lucide-react';
 import { OSOP_TEMPLATES } from './lib/templates';
 import { generateOsopFromPrompt } from './lib/ai-generate';
+import { generateHtmlReport } from './lib/report/html-report';
+import { analyzeWorkflowRisk, WorkflowRiskReport } from './lib/risk';
 import { useT, LOCALE_OPTIONS } from './i18n';
 
 type TabType = 'graph' | 'story' | 'role' | 'agent' | 'mcp';
@@ -21,6 +24,16 @@ const EXAMPLE_FILES = [
   { nameKey: 'example.retryLoop', file: 'retry_loop.osop' },
   { nameKey: 'example.fallbackError', file: 'fallback_error.osop' },
   { nameKey: 'example.b2bSupplyChain', file: 'b2b_supply_chain.osop' },
+  { nameKey: 'example.dailyStandup', file: 'daily_standup_bot.osop' },
+  { nameKey: 'example.meetingPrep', file: 'meeting_prep.osop' },
+  { nameKey: 'example.prReview', file: 'pr_review_pipeline.osop' },
+  { nameKey: 'example.translateLocalize', file: 'translate_localize.osop' },
+  { nameKey: 'example.competitorResearch', file: 'competitor_research.osop' },
+  { nameKey: 'example.repoSetup', file: 'repo_setup.osop' },
+  { nameKey: 'example.emailTriage', file: 'email_triage.osop' },
+  { nameKey: 'example.weeklyReport', file: 'weekly_report.osop' },
+  { nameKey: 'example.bugTriage', file: 'bug_triage.osop' },
+  { nameKey: 'example.agentResearch', file: 'agent_research.osop' },
 ];
 
 export default function App() {
@@ -36,6 +49,8 @@ export default function App() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [riskOverlay, setRiskOverlay] = useState(false);
+  const [showRiskPanel, setShowRiskPanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,6 +62,11 @@ export default function App() {
       setError(t('error.invalidYaml'));
     }
   }, [yamlText, t]);
+
+  const riskReport = useMemo<WorkflowRiskReport | null>(() => {
+    if (!workflow) return null;
+    return analyzeWorkflowRisk(workflow);
+  }, [workflow]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const tpl = OSOP_TEMPLATES.find(t => t.id === e.target.value);
@@ -79,6 +99,20 @@ export default function App() {
     const a = document.createElement('a');
     a.href = url;
     a.download = defaultName.endsWith('.osop') ? defaultName : `${defaultName}.osop`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateReport = () => {
+    const html = generateHtmlReport(yamlText);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const baseName = fileName?.replace(/\.(osop|yaml|yml)$/g, '') || workflow?.id || 'workflow';
+    a.download = `${baseName}-report.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -192,6 +226,14 @@ export default function App() {
             >
               <Save className="w-3.5 h-3.5" />
               {t('button.save')}
+            </button>
+            <button
+              onClick={handleGenerateReport}
+              className="flex items-center gap-1.5 bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
+              title="Generate HTML Report"
+            >
+              <FileOutput className="w-3.5 h-3.5" />
+              Report
             </button>
             <div className="relative">
               <button
@@ -339,6 +381,30 @@ export default function App() {
           <TabButton active={activeTab === 'role'} onClick={() => setActiveTab('role')} icon={<Users className="w-4 h-4" />} label={t('tab.role')} />
           <TabButton active={activeTab === 'agent'} onClick={() => setActiveTab('agent')} icon={<Bot className="w-4 h-4" />} label={t('tab.agent')} />
           <div className="flex-1" />
+          {/* Risk Analysis Toggle */}
+          <button
+            onClick={() => { setShowRiskPanel(!showRiskPanel); setRiskOverlay(!showRiskPanel); }}
+            className={
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all " +
+              (showRiskPanel
+                ? "bg-red-100 text-red-700 shadow-sm border border-red-200"
+                : "text-slate-500 hover:bg-slate-200 hover:text-slate-700")
+            }
+            title="Toggle Risk Analysis"
+          >
+            <ShieldAlert className="w-4 h-4" />
+            Risk
+            {riskReport && riskReport.overall_score > 0 && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                riskReport.verdict === 'danger' ? 'bg-red-600 text-white' :
+                riskReport.verdict === 'warning' ? 'bg-orange-500 text-white' :
+                riskReport.verdict === 'caution' ? 'bg-yellow-500 text-white' :
+                'bg-emerald-500 text-white'
+              }`}>
+                {riskReport.overall_score}
+              </span>
+            )}
+          </button>
           <TabButton active={activeTab === 'mcp'} onClick={() => setActiveTab('mcp')} icon={<TerminalSquare className="w-4 h-4" />} label={t('tab.mcp')} />
         </div>
 
@@ -365,12 +431,19 @@ export default function App() {
                   )}
                 </div>
               )}
-              <div className="flex-1 overflow-hidden relative">
-                {activeTab === 'graph' && <GraphView workflow={workflow} />}
-                {activeTab === 'story' && <StoryView workflow={workflow} />}
-                {activeTab === 'role' && <RoleView workflow={workflow} />}
-                {activeTab === 'agent' && <AgentView workflow={workflow} />}
-                {activeTab === 'mcp' && <McpCliSkeleton />}
+              <div className="flex-1 overflow-hidden relative flex">
+                <div className={`${showRiskPanel ? 'flex-1' : 'w-full'} overflow-hidden`}>
+                  {activeTab === 'graph' && <GraphView workflow={workflow} riskReport={riskReport} riskOverlay={riskOverlay} />}
+                  {activeTab === 'story' && <StoryView workflow={workflow} />}
+                  {activeTab === 'role' && <RoleView workflow={workflow} />}
+                  {activeTab === 'agent' && <AgentView workflow={workflow} />}
+                  {activeTab === 'mcp' && <McpCliSkeleton />}
+                </div>
+                {showRiskPanel && riskReport && (
+                  <div className="w-80 border-l border-slate-200 shrink-0">
+                    <RiskPanel report={riskReport} />
+                  </div>
+                )}
               </div>
             </>
           ) : (
