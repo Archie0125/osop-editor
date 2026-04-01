@@ -189,6 +189,51 @@ export async function simulateWorkflow(
     record.node_records.push(nodeRecord);
     options.onNodeComplete?.(nodeId, nodeRecord);
 
+    // Handle spawn edges: create child agent records
+    if (!failed) {
+      const spawnEdges = getOutgoingEdges(nodeId, workflow.edges).filter(e => e.mode === 'spawn');
+      for (const spawnEdge of spawnEdges) {
+        const childNode = nodeMap.get(spawnEdge.to);
+        if (!childNode) continue;
+        const count = (spawnEdge as any).spawn_count || 1;
+        for (let si = 1; si <= count; si++) {
+          const childStart = new Date().toISOString();
+          const childDelay = randomDelay(childNode);
+          if (options.mode === 'simulated') {
+            await new Promise(r => setTimeout(r, Math.min(childDelay, 2000)));
+          }
+          const childFailed = options.mode === 'simulated' && shouldFail(childNode);
+          const childRecord: NodeRunRecord = {
+            run_id: runId,
+            node_id: count > 1 ? `${childNode.id}#${si}` : childNode.id,
+            node_type: childNode.type,
+            attempt: 1,
+            status: childFailed ? 'FAILED' : 'COMPLETED',
+            started_at: childStart,
+            ended_at: new Date().toISOString(),
+            duration_ms: childDelay,
+            inputs_snapshot: mockInputs(childNode),
+            outputs_snapshot: childFailed ? undefined : mockOutputs(childNode),
+            error: childFailed ? { code: 'SIM_FAIL', message: `Simulated failure at ${childNode.id}#${si}` } : undefined,
+            action_ref: NODE_TYPE_ACTION_MAP[childNode.type] || { type: 'simulated' },
+            parent_id: nodeId,
+            spawn_index: si,
+            isolation: 'none',
+          };
+          if (childNode.type === 'agent' && !childFailed) {
+            childRecord.ai_metadata = {
+              model: childNode.runtime?.model || 'unknown',
+              prompt_tokens: Math.round(500 + Math.random() * 1500),
+              completion_tokens: Math.round(200 + Math.random() * 800),
+              confidence: +(0.7 + Math.random() * 0.3).toFixed(2),
+            };
+          }
+          record.node_records.push(childRecord);
+          options.onNodeComplete?.(childRecord.node_id, childRecord);
+        }
+      }
+    }
+
     // Update context
     if (!failed) {
       context.outputs[nodeId] = nodeRecord.outputs_snapshot;
