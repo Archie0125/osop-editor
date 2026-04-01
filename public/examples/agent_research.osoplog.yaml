@@ -1,0 +1,183 @@
+osoplog_version: "1.0"
+run_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+workflow_id: "research-and-summarize"
+workflow_version: "1.0.0"
+workflow_hash: "sha256:3f2a8b91c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9"
+
+mode: "live"
+status: "COMPLETED"
+
+trigger:
+  type: "manual"
+  source: "osop-editor"
+  actor: "alice@example.com"
+  timestamp: "2026-04-01T09:00:00Z"
+
+started_at: "2026-04-01T09:00:00Z"
+ended_at: "2026-04-01T09:00:32Z"
+duration_ms: 32400
+
+runtime:
+  agent: "claude-code"
+  agent_version: "1.2.0"
+  model: "claude-sonnet-4-20250514"
+  platform: "darwin-arm64"
+  session_id: "sess_research_q2"
+
+node_records:
+  - node_id: "receive_request"
+    node_type: "human"
+    attempt: 1
+    status: "COMPLETED"
+    started_at: "2026-04-01T09:00:00Z"
+    ended_at: "2026-04-01T09:00:00Z"
+    duration_ms: 120
+    outputs:
+      topic: "Impact of quantum computing on cryptography in 2026"
+      depth: "standard"
+    human_metadata:
+      actor: "alice@example.com"
+      decision: "submitted"
+      notes: "Interested in post-quantum cryptography standards"
+
+  - node_id: "search_web"
+    node_type: "mcp"
+    attempt: 1
+    status: "COMPLETED"
+    started_at: "2026-04-01T09:00:01Z"
+    ended_at: "2026-04-01T09:00:04Z"
+    duration_ms: 3200
+    inputs:
+      query: "quantum computing cryptography impact 2026"
+      max_results: 20
+    outputs:
+      results_count: 18
+      top_sources:
+        - "https://arxiv.org/abs/2026.01234"
+        - "https://www.nature.com/articles/quantum-crypto-2026"
+        - "https://www.nist.gov/pqc-standards-2026"
+    tools_used:
+      - { tool: "web_search", calls: 3 }
+      - { tool: "fetch_page", calls: 5 }
+
+  - node_id: "search_academic"
+    node_type: "api"
+    attempt: 1
+    status: "FAILED"
+    started_at: "2026-04-01T09:00:01Z"
+    ended_at: "2026-04-01T09:00:03Z"
+    duration_ms: 2100
+    inputs:
+      query: "quantum computing cryptography"
+      year: "2025-2026"
+    error:
+      code: "RATE_LIMITED"
+      message: "Semantic Scholar API rate limit exceeded (429)"
+
+  - node_id: "search_academic"
+    node_type: "api"
+    attempt: 2
+    status: "COMPLETED"
+    started_at: "2026-04-01T09:00:05Z"
+    ended_at: "2026-04-01T09:00:08Z"
+    duration_ms: 2800
+    inputs:
+      query: "quantum computing cryptography"
+      year: "2025-2026"
+    outputs:
+      papers_found: 7
+      top_papers:
+        - title: "Post-Quantum Cryptographic Standards: A 2026 Survey"
+          authors: ["Chen, L.", "Jordan, S."]
+          citations: 142
+        - title: "Quantum Key Distribution at Scale"
+          authors: ["Mueller, R.", "Wang, X."]
+          citations: 89
+
+  - node_id: "analyze_sources"
+    node_type: "agent"
+    attempt: 1
+    status: "COMPLETED"
+    started_at: "2026-04-01T09:00:08Z"
+    ended_at: "2026-04-01T09:00:16Z"
+    duration_ms: 7800
+    inputs:
+      web_sources: 18
+      academic_papers: 7
+    outputs:
+      themes_identified: 5
+      themes:
+        - "NIST post-quantum standards finalization"
+        - "Quantum Key Distribution (QKD) commercial deployment"
+        - "Hybrid classical-quantum cryptographic approaches"
+        - "Timeline for quantum threat to RSA/ECC"
+        - "Migration strategies for enterprises"
+      credibility_assessment: "High — 80% peer-reviewed or government sources"
+    ai_metadata:
+      model: "claude-sonnet-4-20250514"
+      provider: "anthropic"
+      prompt_tokens: 12400
+      completion_tokens: 2100
+      cost_usd: 0.058
+      confidence: 0.91
+    tools_used:
+      - { tool: "read_file", calls: 5 }
+
+  - node_id: "draft_report"
+    node_type: "agent"
+    attempt: 1
+    status: "COMPLETED"
+    started_at: "2026-04-01T09:00:16Z"
+    ended_at: "2026-04-01T09:00:27Z"
+    duration_ms: 11200
+    inputs:
+      themes: 5
+      key_findings: 12
+      target_depth: "standard"
+    outputs:
+      word_count: 2847
+      sections: 6
+      citations_count: 15
+      report_preview: "## Executive Summary\nQuantum computing poses both an existential threat to current cryptographic standards and an opportunity for fundamentally stronger security..."
+    ai_metadata:
+      model: "claude-sonnet-4-20250514"
+      provider: "anthropic"
+      prompt_tokens: 8200
+      completion_tokens: 6400
+      cost_usd: 0.082
+      confidence: 0.94
+    tools_used:
+      - { tool: "write_file", calls: 1 }
+
+  - node_id: "review_report"
+    node_type: "human"
+    attempt: 1
+    status: "COMPLETED"
+    started_at: "2026-04-01T09:00:27Z"
+    ended_at: "2026-04-01T09:00:32Z"
+    duration_ms: 5200
+    outputs:
+      decision: "approve"
+    human_metadata:
+      actor: "alice@example.com"
+      decision: "approved"
+      notes: "Excellent coverage. The section on migration strategies is particularly useful."
+      response_time_ms: 5200
+
+variables:
+  topic: "Impact of quantum computing on cryptography in 2026"
+  depth: "standard"
+  report_word_count: 2847
+  decision: "approve"
+
+result_summary: "Research completed on 'quantum computing & cryptography'. AI analyzed 25 sources (18 web + 7 academic), identified 5 key themes, produced a 2,847-word report with 15 citations. One API retry (rate limit). Human approved in 5.2s."
+
+cost:
+  total_usd: 0.140
+  breakdown:
+    - { node_id: "analyze_sources", cost_usd: 0.058 }
+    - { node_id: "draft_report", cost_usd: 0.082 }
+    - { node_id: "search_web", cost_usd: 0.000 }
+    - { node_id: "search_academic", cost_usd: 0.000 }
+    - { node_id: "receive_request", cost_usd: 0.000 }
+    - { node_id: "review_report", cost_usd: 0.000 }

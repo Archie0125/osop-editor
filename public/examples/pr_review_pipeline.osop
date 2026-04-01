@@ -1,0 +1,125 @@
+osop_version: "1.0"
+id: pr_review_pipeline
+name: Pull Request Review Pipeline
+description: AI reviews code, runs tests, human approves, auto-merges. Supports retry on test failure.
+
+nodes:
+  - id: pr_opened
+    type: event
+    purpose: GitHub webhook — new PR opened or updated
+    outputs:
+      - name: pr_url
+      - name: diff_content
+      - name: branch_name
+    explain:
+      what: "Triggered when a developer opens or pushes to a PR"
+
+  - id: run_ci
+    type: cicd
+    purpose: Run lint, type-check, unit tests, and integration tests
+    inputs:
+      - name: branch_name
+    outputs:
+      - name: ci_result
+        schema: "pass | fail"
+      - name: test_report
+    explain:
+      what: "CI pipeline executes all automated checks"
+
+  - id: ai_code_review
+    type: agent
+    role: reviewer
+    purpose: Review diff for bugs, security issues, style violations, and suggest improvements
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: diff_content
+    outputs:
+      - name: review_comments
+        schema: ReviewComment[]
+      - name: risk_level
+        schema: "low | medium | high"
+    success_criteria:
+      - "No critical security findings"
+    explain:
+      what: "AI performs thorough code review and posts inline comments"
+
+  - id: post_review_comments
+    type: api
+    purpose: Post AI review comments as GitHub PR review
+    inputs:
+      - name: review_comments
+      - name: pr_url
+    explain:
+      what: "Post review findings as inline GitHub comments"
+
+  - id: human_review
+    type: human
+    role: senior_engineer
+    purpose: Senior engineer reviews AI findings and gives final approval
+    inputs:
+      - name: review_comments
+      - name: test_report
+      - name: risk_level
+    outputs:
+      - name: decision
+        schema: "approve | request_changes"
+    explain:
+      what: "Human reviewer checks AI analysis and makes final call"
+
+  - id: auto_merge
+    type: git
+    purpose: Squash-merge PR into main branch
+    inputs:
+      - name: pr_url
+    explain:
+      what: "Auto-merge the approved PR"
+
+  - id: notify_author
+    type: api
+    purpose: Send Slack DM to PR author with result
+    explain:
+      what: "Notify the developer that their PR was merged or needs changes"
+
+edges:
+  - from: pr_opened
+    to: run_ci
+    mode: sequential
+
+  - from: pr_opened
+    to: ai_code_review
+    mode: parallel
+    label: "CI and AI review run simultaneously"
+
+  - from: run_ci
+    to: human_review
+    mode: conditional
+    when: "ci_result == 'pass'"
+
+  - from: run_ci
+    to: notify_author
+    mode: conditional
+    when: "ci_result == 'fail'"
+    label: "CI failed — notify author"
+
+  - from: ai_code_review
+    to: post_review_comments
+    mode: sequential
+
+  - from: post_review_comments
+    to: human_review
+    mode: sequential
+
+  - from: human_review
+    to: auto_merge
+    mode: conditional
+    when: "decision == 'approve'"
+
+  - from: human_review
+    to: notify_author
+    mode: conditional
+    when: "decision == 'request_changes'"
+
+  - from: auto_merge
+    to: notify_author
+    mode: sequential

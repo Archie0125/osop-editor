@@ -1,0 +1,122 @@
+osop_version: "1.0"
+id: competitor_research
+name: Competitor Research & Analysis
+description: AI scrapes competitor data, analyzes pricing/features, generates strategic report for leadership.
+
+nodes:
+  - id: define_scope
+    type: human
+    purpose: Define competitors to analyze and focus areas
+    role: product_manager
+    outputs:
+      - name: competitor_list
+        schema: string[]
+      - name: focus_areas
+        schema: string[]
+    explain:
+      what: "PM specifies which competitors and what dimensions (pricing, features, market position)"
+
+  - id: scrape_websites
+    type: mcp
+    purpose: "MCP tool: web_scrape — collect competitor product pages, pricing, changelogs"
+    inputs:
+      - name: competitor_list
+    outputs:
+      - name: raw_data
+        schema: ScrapedData[]
+    explain:
+      what: "Use MCP web scraping tool to collect public competitor information"
+
+  - id: scrape_reviews
+    type: api
+    purpose: Fetch G2/Capterra reviews via API
+    inputs:
+      - name: competitor_list
+    outputs:
+      - name: review_data
+        schema: ReviewData[]
+    explain:
+      what: "Pull customer reviews from major review platforms"
+
+  - id: analyze_features
+    type: agent
+    role: analyst
+    purpose: Compare feature matrices and identify gaps/advantages
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: raw_data
+      - name: focus_areas
+    outputs:
+      - name: feature_comparison
+        schema: FeatureMatrix
+    explain:
+      what: "AI builds a structured feature comparison table"
+
+  - id: analyze_sentiment
+    type: agent
+    role: analyst
+    purpose: Analyze review sentiment — what customers love/hate about each competitor
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: review_data
+    outputs:
+      - name: sentiment_report
+        schema: SentimentReport
+    explain:
+      what: "AI extracts sentiment patterns from customer reviews"
+
+  - id: generate_report
+    type: agent
+    role: strategist
+    purpose: Synthesize all analysis into an executive strategy report
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: feature_comparison
+      - name: sentiment_report
+    outputs:
+      - name: strategy_report
+        schema: string
+    explain:
+      what: "AI generates a comprehensive competitive analysis report with recommendations"
+
+  - id: review_present
+    type: human
+    role: product_manager
+    purpose: PM reviews report, presents to leadership
+    inputs:
+      - name: strategy_report
+    explain:
+      what: "PM validates findings and prepares leadership presentation"
+
+edges:
+  - from: define_scope
+    to: scrape_websites
+    mode: parallel
+    label: "Scrape multiple sources in parallel"
+
+  - from: define_scope
+    to: scrape_reviews
+    mode: parallel
+
+  - from: scrape_websites
+    to: analyze_features
+    mode: dataflow
+
+  - from: scrape_reviews
+    to: analyze_sentiment
+    mode: dataflow
+
+  - from: analyze_features
+    to: generate_report
+    mode: dataflow
+
+  - from: analyze_sentiment
+    to: generate_report
+    mode: dataflow
+
+  - from: generate_report
+    to: review_present
+    mode: sequential

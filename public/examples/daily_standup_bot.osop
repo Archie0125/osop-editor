@@ -1,0 +1,80 @@
+osop_version: "1.0"
+id: daily_standup_bot
+name: Daily Standup Bot
+description: AI reads git commits and Jira tickets, generates standup report, posts to Slack.
+
+nodes:
+  - id: trigger_morning
+    type: event
+    purpose: Cron trigger at 9:00 AM every workday
+    explain:
+      what: "Every workday at 9 AM, automatically trigger the standup pipeline"
+
+  - id: fetch_git_log
+    type: cli
+    purpose: "Run: git log --since='yesterday' --oneline for each team member"
+    inputs:
+      - name: repo_urls
+        schema: string[]
+    outputs:
+      - name: commit_summaries
+        schema: CommitSummary[]
+    explain:
+      what: "Pull yesterday's git commits from all team repos"
+
+  - id: fetch_jira_tickets
+    type: api
+    purpose: Query Jira API for in-progress and resolved tickets
+    inputs:
+      - name: project_key
+        schema: string
+    outputs:
+      - name: ticket_updates
+        schema: JiraTicket[]
+    explain:
+      what: "Get current sprint ticket status from Jira"
+
+  - id: generate_report
+    type: agent
+    role: reporter
+    purpose: Synthesize git + Jira data into a concise standup report
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: commit_summaries
+      - name: ticket_updates
+    outputs:
+      - name: standup_report
+        schema: string
+    explain:
+      what: "AI combines commit history and ticket updates into a readable standup summary per person"
+
+  - id: post_slack
+    type: api
+    purpose: Post formatted report to #daily-standup Slack channel
+    inputs:
+      - name: standup_report
+    explain:
+      what: "Send the generated standup report to Slack via webhook"
+
+edges:
+  - from: trigger_morning
+    to: fetch_git_log
+    mode: sequential
+
+  - from: trigger_morning
+    to: fetch_jira_tickets
+    mode: parallel
+    label: "Fetch sources in parallel"
+
+  - from: fetch_git_log
+    to: generate_report
+    mode: dataflow
+
+  - from: fetch_jira_tickets
+    to: generate_report
+    mode: dataflow
+
+  - from: generate_report
+    to: post_slack
+    mode: sequential

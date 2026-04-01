@@ -1,0 +1,133 @@
+osop_version: "1.0"
+id: email_triage
+name: Email Triage & Auto-Reply
+description: AI classifies incoming emails, drafts replies for routine ones, escalates important ones to human.
+
+nodes:
+  - id: receive_email
+    type: event
+    purpose: New email arrives in shared inbox
+    outputs:
+      - name: email_content
+      - name: sender
+      - name: subject
+    explain:
+      what: "Triggered when a new email arrives in the team inbox"
+
+  - id: classify_email
+    type: agent
+    role: classifier
+    purpose: Classify email into categories — urgent, routine, spam, sales
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: email_content
+      - name: sender
+      - name: subject
+    outputs:
+      - name: category
+        schema: "urgent | routine | spam | sales"
+      - name: confidence
+        schema: number
+      - name: summary
+        schema: string
+    explain:
+      what: "AI reads the email and classifies its type and urgency"
+
+  - id: filter_spam
+    type: system
+    purpose: Archive spam emails automatically
+    explain:
+      what: "Move spam to archive, no further action needed"
+
+  - id: draft_reply
+    type: agent
+    role: assistant
+    purpose: Generate appropriate reply for routine emails
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: email_content
+      - name: category
+    outputs:
+      - name: draft_response
+        schema: string
+    explain:
+      what: "AI drafts a professional reply based on email content"
+
+  - id: human_review_draft
+    type: human
+    role: team_member
+    purpose: Quick review of AI draft before sending
+    inputs:
+      - name: draft_response
+      - name: summary
+    outputs:
+      - name: approved
+        schema: boolean
+    explain:
+      what: "Team member reviews the draft — approve, edit, or reject"
+
+  - id: send_reply
+    type: api
+    purpose: Send the approved reply via Gmail API
+    inputs:
+      - name: draft_response
+    explain:
+      what: "Send the finalized reply"
+
+  - id: escalate_urgent
+    type: human
+    role: manager
+    purpose: Manager handles urgent emails directly
+    inputs:
+      - name: email_content
+      - name: summary
+    explain:
+      what: "Urgent emails go directly to manager with AI summary"
+
+  - id: log_crm
+    type: db
+    purpose: Log all email interactions to CRM
+    explain:
+      what: "Record the interaction in the CRM for tracking"
+
+edges:
+  - from: receive_email
+    to: classify_email
+    mode: sequential
+
+  - from: classify_email
+    to: filter_spam
+    mode: conditional
+    when: "category == 'spam'"
+    label: "Spam"
+
+  - from: classify_email
+    to: draft_reply
+    mode: conditional
+    when: "category == 'routine' OR category == 'sales'"
+    label: "Routine / Sales"
+
+  - from: classify_email
+    to: escalate_urgent
+    mode: conditional
+    when: "category == 'urgent'"
+    label: "Urgent"
+
+  - from: draft_reply
+    to: human_review_draft
+    mode: sequential
+
+  - from: human_review_draft
+    to: send_reply
+    mode: conditional
+    when: "approved == true"
+
+  - from: send_reply
+    to: log_crm
+    mode: sequential
+
+  - from: escalate_urgent
+    to: log_crm
+    mode: sequential

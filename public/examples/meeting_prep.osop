@@ -1,0 +1,103 @@
+osop_version: "1.0"
+id: meeting_prep
+name: Meeting Prep Assistant
+description: AI researches attendees, drafts agenda, prepares talking points, and sends calendar invite.
+
+nodes:
+  - id: input_meeting
+    type: human
+    purpose: User provides meeting topic, attendees, and date
+    role: organizer
+    outputs:
+      - name: meeting_context
+        schema: MeetingContext
+    explain:
+      what: "Organizer inputs meeting details — who, what, when"
+
+  - id: research_attendees
+    type: agent
+    role: researcher
+    purpose: Look up each attendee's role, recent projects, and LinkedIn summary
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: meeting_context
+    outputs:
+      - name: attendee_profiles
+        schema: AttendeeProfile[]
+    explain:
+      what: "AI researches each attendee's background for context"
+
+  - id: draft_agenda
+    type: agent
+    role: planner
+    purpose: Generate structured agenda with time allocations
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: meeting_context
+      - name: attendee_profiles
+    outputs:
+      - name: agenda
+        schema: Agenda
+    explain:
+      what: "AI drafts a structured agenda with timing and talking points"
+
+  - id: generate_briefing
+    type: agent
+    role: analyst
+    purpose: Create a 1-page briefing doc with key data points
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: meeting_context
+      - name: attendee_profiles
+    outputs:
+      - name: briefing_doc
+        schema: string
+    explain:
+      what: "AI generates a pre-read briefing document"
+
+  - id: review_approve
+    type: human
+    purpose: Organizer reviews agenda and briefing, makes edits
+    role: organizer
+    inputs:
+      - name: agenda
+      - name: briefing_doc
+    explain:
+      what: "Organizer reviews and tweaks the AI-generated materials"
+
+  - id: send_invite
+    type: api
+    purpose: Create Google Calendar event with agenda in description
+    inputs:
+      - name: agenda
+    explain:
+      what: "Send calendar invite with attached agenda to all attendees"
+
+edges:
+  - from: input_meeting
+    to: research_attendees
+    mode: sequential
+
+  - from: research_attendees
+    to: draft_agenda
+    mode: sequential
+
+  - from: research_attendees
+    to: generate_briefing
+    mode: parallel
+    label: "Agenda + Briefing in parallel"
+
+  - from: draft_agenda
+    to: review_approve
+    mode: dataflow
+
+  - from: generate_briefing
+    to: review_approve
+    mode: dataflow
+
+  - from: review_approve
+    to: send_invite
+    mode: sequential

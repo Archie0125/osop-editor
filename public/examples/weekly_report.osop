@@ -1,0 +1,121 @@
+osop_version: "1.0"
+id: weekly_report
+name: Weekly Team Report Generator
+description: AI aggregates data from GitHub, Jira, Slack, and analytics to compile a comprehensive weekly report.
+
+nodes:
+  - id: trigger_friday
+    type: event
+    purpose: Cron trigger every Friday at 4 PM
+    explain:
+      what: "Automatically kicks off every Friday afternoon"
+
+  - id: fetch_github
+    type: api
+    purpose: Fetch merged PRs, issues closed, and contributor stats this week
+    outputs:
+      - name: github_stats
+    explain:
+      what: "Pull this week's GitHub activity — PRs merged, issues closed, lines changed"
+
+  - id: fetch_jira
+    type: api
+    purpose: Fetch sprint progress, velocity, and blockers
+    outputs:
+      - name: jira_stats
+    explain:
+      what: "Pull sprint burndown, story points completed, and blocked tickets"
+
+  - id: fetch_analytics
+    type: api
+    purpose: Fetch key product metrics (DAU, conversion, errors)
+    outputs:
+      - name: product_metrics
+    explain:
+      what: "Pull key metrics from analytics platform (Mixpanel/Amplitude)"
+
+  - id: fetch_slack_highlights
+    type: mcp
+    purpose: "MCP tool: Extract key decisions and announcements from Slack channels"
+    outputs:
+      - name: slack_highlights
+    explain:
+      what: "AI scans #engineering and #product channels for important decisions"
+
+  - id: compile_report
+    type: agent
+    role: reporter
+    purpose: Synthesize all data sources into a structured weekly report
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: github_stats
+      - name: jira_stats
+      - name: product_metrics
+      - name: slack_highlights
+    outputs:
+      - name: weekly_report
+        schema: string
+    explain:
+      what: "AI writes a comprehensive weekly report with sections: Shipped, In Progress, Blocked, Metrics, Key Decisions"
+
+  - id: manager_review
+    type: human
+    role: engineering_manager
+    purpose: Manager reviews and adds commentary
+    inputs:
+      - name: weekly_report
+    outputs:
+      - name: final_report
+    explain:
+      what: "EM adds context, priorities for next week, and shoutouts"
+
+  - id: distribute
+    type: api
+    purpose: Send report to Slack #weekly-updates and email stakeholders
+    inputs:
+      - name: final_report
+    explain:
+      what: "Post to Slack and email leadership distribution list"
+
+edges:
+  - from: trigger_friday
+    to: fetch_github
+    mode: parallel
+    label: "Fetch all sources in parallel"
+
+  - from: trigger_friday
+    to: fetch_jira
+    mode: parallel
+
+  - from: trigger_friday
+    to: fetch_analytics
+    mode: parallel
+
+  - from: trigger_friday
+    to: fetch_slack_highlights
+    mode: parallel
+
+  - from: fetch_github
+    to: compile_report
+    mode: dataflow
+
+  - from: fetch_jira
+    to: compile_report
+    mode: dataflow
+
+  - from: fetch_analytics
+    to: compile_report
+    mode: dataflow
+
+  - from: fetch_slack_highlights
+    to: compile_report
+    mode: dataflow
+
+  - from: compile_report
+    to: manager_review
+    mode: sequential
+
+  - from: manager_review
+    to: distribute
+    mode: sequential

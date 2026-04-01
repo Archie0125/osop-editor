@@ -1,0 +1,127 @@
+osop_version: "1.0"
+id: bug_triage
+name: Bug Triage & Assignment
+description: AI analyzes bug reports, classifies severity, identifies likely owner, and auto-assigns with context.
+
+nodes:
+  - id: bug_reported
+    type: event
+    purpose: New bug report submitted via Jira, GitHub Issue, or support ticket
+    outputs:
+      - name: bug_title
+      - name: bug_description
+      - name: reporter
+      - name: environment
+    explain:
+      what: "A new bug report enters the system"
+
+  - id: analyze_bug
+    type: agent
+    role: triage_analyst
+    purpose: Classify severity, identify component, check for duplicates
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: bug_title
+      - name: bug_description
+      - name: environment
+    outputs:
+      - name: severity
+        schema: "critical | high | medium | low"
+      - name: component
+        schema: string
+      - name: is_duplicate
+        schema: boolean
+      - name: duplicate_of
+        schema: string
+    explain:
+      what: "AI reads the bug report, classifies severity, identifies which component is affected, and checks for duplicates"
+
+  - id: close_duplicate
+    type: system
+    purpose: Close as duplicate and link to original issue
+    explain:
+      what: "Auto-close duplicate bugs with a link to the original"
+
+  - id: find_owner
+    type: agent
+    role: assigner
+    purpose: "Identify best assignee based on git blame, recent commits, and team roster"
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: component
+      - name: severity
+    outputs:
+      - name: suggested_owner
+        schema: string
+      - name: reasoning
+        schema: string
+    explain:
+      what: "AI looks at who last touched the affected code and suggests the best person to fix it"
+
+  - id: create_context
+    type: agent
+    role: researcher
+    purpose: Gather related logs, recent deploys, and similar past bugs
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: component
+      - name: bug_description
+    outputs:
+      - name: debug_context
+        schema: string
+    explain:
+      what: "AI prepares a debug context package — recent changes, related logs, similar past issues"
+
+  - id: assign_ticket
+    type: api
+    purpose: Assign Jira ticket to suggested owner with context attached
+    inputs:
+      - name: suggested_owner
+      - name: debug_context
+      - name: severity
+    explain:
+      what: "Auto-assign the ticket with all AI-gathered context"
+
+  - id: notify_critical
+    type: api
+    purpose: Send PagerDuty alert for critical bugs
+    explain:
+      what: "Critical bugs trigger an immediate PagerDuty notification"
+
+edges:
+  - from: bug_reported
+    to: analyze_bug
+    mode: sequential
+
+  - from: analyze_bug
+    to: close_duplicate
+    mode: conditional
+    when: "is_duplicate == true"
+    label: "Duplicate"
+
+  - from: analyze_bug
+    to: find_owner
+    mode: conditional
+    when: "is_duplicate == false"
+
+  - from: analyze_bug
+    to: create_context
+    mode: parallel
+    label: "Owner search + context in parallel"
+
+  - from: find_owner
+    to: assign_ticket
+    mode: dataflow
+
+  - from: create_context
+    to: assign_ticket
+    mode: dataflow
+
+  - from: assign_ticket
+    to: notify_critical
+    mode: conditional
+    when: "severity == 'critical'"
+    label: "Critical only"

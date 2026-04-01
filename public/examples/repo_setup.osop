@@ -1,0 +1,125 @@
+osop_version: "1.0"
+id: repo_setup
+name: New Repository Bootstrap
+description: AI sets up a new repo with CI/CD, linting, README, security scanning, and documentation — a common "openclaw, set up my project" task.
+
+nodes:
+  - id: user_request
+    type: human
+    purpose: "Developer says: 'Set up a new TypeScript project with CI, linting, and tests'"
+    role: developer
+    outputs:
+      - name: project_name
+      - name: language
+      - name: features
+        schema: string[]
+    explain:
+      what: "Developer describes the desired project setup"
+
+  - id: create_repo
+    type: git
+    purpose: Initialize git repo with .gitignore and license
+    inputs:
+      - name: project_name
+      - name: language
+    explain:
+      what: "Create repo structure with appropriate .gitignore"
+
+  - id: scaffold_project
+    type: agent
+    role: developer
+    purpose: Generate package.json, tsconfig, src/ structure
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: language
+      - name: features
+    explain:
+      what: "AI generates project scaffolding based on language and requirements"
+
+  - id: setup_ci
+    type: agent
+    role: devops
+    purpose: Generate GitHub Actions workflow for CI/CD
+    runtime:
+      model: claude-sonnet-4-20250514
+    explain:
+      what: "AI creates .github/workflows/ci.yml with test, lint, build steps"
+
+  - id: setup_linting
+    type: agent
+    role: developer
+    purpose: Configure ESLint, Prettier, and pre-commit hooks
+    runtime:
+      model: claude-sonnet-4-20250514
+    explain:
+      what: "AI sets up linting rules and husky pre-commit hooks"
+
+  - id: generate_readme
+    type: agent
+    role: writer
+    purpose: Generate comprehensive README.md with badges, setup, and API docs
+    runtime:
+      model: claude-sonnet-4-20250514
+    explain:
+      what: "AI writes a professional README with quick start guide"
+
+  - id: security_scan
+    type: mcp
+    purpose: "MCP tool: run initial dependency audit and SAST scan"
+    explain:
+      what: "Run security audit on dependencies and initial code"
+
+  - id: first_commit
+    type: git
+    purpose: Stage all files and create initial commit
+    explain:
+      what: "Commit everything and push to remote"
+
+  - id: verify_ci
+    type: cicd
+    purpose: Confirm CI pipeline passes on first run
+    explain:
+      what: "Wait for GitHub Actions to complete and verify green status"
+
+edges:
+  - from: user_request
+    to: create_repo
+    mode: sequential
+
+  - from: create_repo
+    to: scaffold_project
+    mode: sequential
+
+  - from: scaffold_project
+    to: setup_ci
+    mode: parallel
+    label: "CI, linting, README in parallel"
+
+  - from: scaffold_project
+    to: setup_linting
+    mode: parallel
+
+  - from: scaffold_project
+    to: generate_readme
+    mode: parallel
+
+  - from: setup_ci
+    to: security_scan
+    mode: dataflow
+
+  - from: setup_linting
+    to: security_scan
+    mode: dataflow
+
+  - from: generate_readme
+    to: security_scan
+    mode: dataflow
+
+  - from: security_scan
+    to: first_commit
+    mode: sequential
+
+  - from: first_commit
+    to: verify_ci
+    mode: sequential

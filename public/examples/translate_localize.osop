@@ -1,0 +1,127 @@
+osop_version: "1.0"
+id: translate_localize
+name: Document Translation & Localization
+description: AI translates content into multiple languages in parallel, human reviewers verify each, then deploy.
+
+nodes:
+  - id: upload_source
+    type: human
+    purpose: Upload source document (English)
+    role: content_manager
+    outputs:
+      - name: source_text
+        schema: string
+      - name: target_languages
+        schema: string[]
+    explain:
+      what: "Content manager uploads the English source and selects target languages"
+
+  - id: translate_zh
+    type: agent
+    role: translator
+    purpose: "Translate to Traditional Chinese (zh-TW)"
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: source_text
+    outputs:
+      - name: translated_zh
+    explain:
+      what: "AI translates to Traditional Chinese with cultural localization"
+
+  - id: translate_ja
+    type: agent
+    role: translator
+    purpose: "Translate to Japanese (ja)"
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: source_text
+    outputs:
+      - name: translated_ja
+    explain:
+      what: "AI translates to Japanese with proper keigo and formatting"
+
+  - id: translate_ko
+    type: agent
+    role: translator
+    purpose: "Translate to Korean (ko)"
+    runtime:
+      model: claude-sonnet-4-20250514
+    inputs:
+      - name: source_text
+    outputs:
+      - name: translated_ko
+    explain:
+      what: "AI translates to Korean with appropriate honorifics"
+
+  - id: review_zh
+    type: human
+    role: zh_reviewer
+    purpose: Native speaker reviews Chinese translation
+    inputs:
+      - name: translated_zh
+    explain:
+      what: "Native Chinese reviewer checks accuracy and naturalness"
+
+  - id: review_ja
+    type: human
+    role: ja_reviewer
+    purpose: Native speaker reviews Japanese translation
+    inputs:
+      - name: translated_ja
+    explain:
+      what: "Native Japanese reviewer checks accuracy and naturalness"
+
+  - id: review_ko
+    type: human
+    role: ko_reviewer
+    purpose: Native speaker reviews Korean translation
+    inputs:
+      - name: translated_ko
+    explain:
+      what: "Native Korean reviewer checks accuracy and naturalness"
+
+  - id: deploy_i18n
+    type: api
+    purpose: Push all verified translations to i18n service
+    explain:
+      what: "Deploy finalized translations to the localization platform"
+
+edges:
+  - from: upload_source
+    to: translate_zh
+    mode: parallel
+    label: "All translations start simultaneously"
+
+  - from: upload_source
+    to: translate_ja
+    mode: parallel
+
+  - from: upload_source
+    to: translate_ko
+    mode: parallel
+
+  - from: translate_zh
+    to: review_zh
+    mode: sequential
+
+  - from: translate_ja
+    to: review_ja
+    mode: sequential
+
+  - from: translate_ko
+    to: review_ko
+    mode: sequential
+
+  - from: review_zh
+    to: deploy_i18n
+    mode: dataflow
+
+  - from: review_ja
+    to: deploy_i18n
+    mode: dataflow
+
+  - from: review_ko
+    to: deploy_i18n
+    mode: dataflow

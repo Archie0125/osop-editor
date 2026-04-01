@@ -1,0 +1,8 @@
+{
+  "osop_version": "1.0",
+  "conformance": "validate",
+  "capabilities": ["parse", "validate", "render", "report"],
+  "extensions": [],
+  "repo": "https://github.com/user/osop-editor",
+  "maintainer": "osop-team"
+}

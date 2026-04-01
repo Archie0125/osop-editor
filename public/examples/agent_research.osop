@@ -1,0 +1,145 @@
+osop_version: "1.0"
+id: "research-and-summarize"
+name: "Research and Summarize Topic"
+description: "AI agent researches a topic using web search, analyzes sources, drafts a comprehensive report, and presents it for human review."
+version: "1.0.0"
+owner: "ai-team"
+tags: [research, ai-agent, report]
+
+inputs:
+  topic:
+    type: string
+    description: "The research topic to investigate"
+  depth:
+    type: string
+    enum: [brief, standard, deep]
+    default: standard
+
+nodes:
+  - id: "receive_request"
+    type: "human"
+    subtype: "input"
+    name: "User Submits Request"
+    description: "User provides the research topic and desired depth."
+    outputs:
+      topic:
+        type: string
+      depth:
+        type: string
+
+  - id: "search_web"
+    type: "mcp"
+    subtype: "tool"
+    name: "Search Web Sources"
+    description: "Use web search MCP tool to find relevant sources."
+    runtime:
+      server: "browser-tools"
+      tool_name: "web_search"
+    inputs:
+      query:
+        type: string
+    outputs:
+      results:
+        type: array
+        items:
+          type: object
+
+  - id: "search_academic"
+    type: "api"
+    subtype: "rest"
+    name: "Search Academic Papers"
+    description: "Query academic databases for peer-reviewed sources."
+    runtime:
+      method: GET
+      url: "https://api.semanticscholar.org/graph/v1/paper/search"
+      headers:
+        Accept: "application/json"
+    outputs:
+      papers:
+        type: array
+
+  - id: "analyze_sources"
+    type: "agent"
+    subtype: "llm"
+    name: "AI Analyzes Sources"
+    description: "AI reviews all collected sources, identifies key themes, evaluates credibility."
+    runtime:
+      provider: "anthropic"
+      model: "claude-sonnet-4-20250514"
+    inputs:
+      web_results:
+        type: array
+      academic_papers:
+        type: array
+    outputs:
+      themes:
+        type: array
+      key_findings:
+        type: array
+      credibility_scores:
+        type: object
+
+  - id: "draft_report"
+    type: "agent"
+    subtype: "llm"
+    name: "AI Drafts Report"
+    description: "AI generates a structured research report with citations."
+    runtime:
+      provider: "anthropic"
+      model: "claude-sonnet-4-20250514"
+    inputs:
+      themes:
+        type: array
+      key_findings:
+        type: array
+    outputs:
+      report:
+        type: string
+      word_count:
+        type: integer
+      citations:
+        type: array
+
+  - id: "review_report"
+    type: "human"
+    subtype: "review"
+    name: "User Reviews Report"
+    description: "User reviews the AI-generated report and approves or requests revisions."
+    runtime:
+      approvers: ["requester"]
+      timeout: "24h"
+    outputs:
+      decision:
+        type: string
+        enum: [approve, revise, reject]
+
+edges:
+  - from: "receive_request"
+    to: "search_web"
+    mode: "parallel"
+  - from: "receive_request"
+    to: "search_academic"
+    mode: "parallel"
+  - from: "search_web"
+    to: "analyze_sources"
+    mode: "sequential"
+  - from: "search_academic"
+    to: "analyze_sources"
+    mode: "sequential"
+  - from: "analyze_sources"
+    to: "draft_report"
+  - from: "draft_report"
+    to: "review_report"
+  - from: "review_report"
+    to: "draft_report"
+    mode: "loop"
+    when: "outputs.review_report.decision == 'revise'"
+    label: "Revision requested"
+
+retry:
+  max_attempts: 2
+  backoff:
+    type: "exponential"
+    initial_delay: "2s"
+
+timeout: "30m"
