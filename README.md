@@ -1,11 +1,8 @@
-# OSOP Editor — Visual Workflow Editor with Risk Analysis
+# OSOP Editor
 
-[![OSOP Compatible](https://img.shields.io/badge/OSOP-compatible-blue)](https://osop.ai)
-[![Deploy](https://img.shields.io/badge/demo-osop--editor.vercel.app-brightgreen)](https://osop-editor.vercel.app)
+**Part of SOP Doc.** See any .osop workflow as an interactive visual graph.
 
-**See what any workflow does before it runs.** The OSOP Editor is a visual editor for [OSOP](https://github.com/Archie0125/osop-spec) workflows with built-in **risk analysis** — the first tool that lets you inspect how someone else's skill or automation works and understand if it's safe.
-
-Live demo: **[osop-editor.vercel.app](https://osop-editor.vercel.app)**
+Drag and drop .osop files to visualize them. 5 view modes (graph, story, role, agent, code). Built-in risk analysis. Execution replay when you load an .osoplog alongside. The viewer for SOP Doc.
 
 ## Key Features
 

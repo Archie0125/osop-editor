@@ -60,6 +60,19 @@ export default function App() {
   const [playbackNodeId, setPlaybackNodeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load from URL parameter: ?yaml=... (URL-encoded YAML)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const yamlParam = params.get('yaml');
+    if (yamlParam) {
+      try {
+        const decoded = decodeURIComponent(yamlParam);
+        setYamlText(decoded);
+        setFileName('imported.osop.yaml');
+      } catch { /* ignore decode errors */ }
+    }
+  }, []);
+
   useEffect(() => {
     const parsed = parseOsop(yamlText);
     if (parsed) {

@@ -88,7 +88,6 @@ function kvTable(obj: any): string {
 
 const CSS = `*{margin:0;padding:0;box-sizing:border-box}
 :root{--ok:#16a34a;--err:#dc2626;--warn:#d97706;--bg:#fff;--fg:#1e293b;--mu:#64748b;--bd:#e2e8f0;--cd:#f8fafc}
-@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--fg:#e2e8f0;--mu:#94a3b8;--bd:#334155;--cd:#1e293b}}
 body{font:14px/1.6 system-ui,sans-serif;background:var(--bg);color:var(--fg);max-width:800px;margin:0 auto;padding:16px}
 h1{font-size:1.4rem;font-weight:700}
 .st{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}.st span{font-weight:600}
@@ -96,7 +95,6 @@ h1{font-size:1.4rem;font-weight:700}
 .desc{color:var(--mu);font-size:13px;margin:4px 0}
 .meta{font:11px monospace;color:var(--mu);margin:4px 0}
 .eb{background:#fef2f2;border:1px solid #fecaca;color:var(--err);padding:8px 12px;border-radius:6px;margin:12px 0;font-size:13px}
-@media(prefers-color-scheme:dark){.eb{background:#450a0a;border-color:#7f1d1d}}
 .n{border:1px solid var(--bd);border-radius:6px;margin:8px 0;overflow:hidden}
 .n.child{margin-left:24px;border-style:dashed}
 .n.coordinator{border-width:2px}
@@ -112,9 +110,7 @@ h1{font-size:1.4rem;font-weight:700}
 .bd td{padding:3px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
 .bd td:first-child{font-weight:600;color:var(--mu);width:30%;font-family:monospace;font-size:11px}
 .ai{font-size:12px;color:#7c3aed;margin-top:8px;font-family:monospace}
-@media(prefers-color-scheme:dark){.ai{color:#a78bfa}}
 .er-box{background:#fef2f2;color:var(--err);padding:8px;border-radius:4px;font-size:12px;margin-top:8px}
-@media(prefers-color-scheme:dark){.er-box{background:#450a0a}}
 .rt{font-size:12px;color:var(--ok);margin-top:4px}
 footer{text-align:center;padding:20px 0;color:var(--mu);font-size:11px}
 footer a{color:#2563eb}`;
