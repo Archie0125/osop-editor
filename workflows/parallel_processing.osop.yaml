@@ -8,7 +8,7 @@ nodes:
     purpose: "Trigger data ingestion process"
 
   - id: "parallel_split"
-    type: "system"
+    type: "cli"
     subtype: "parallel"
     purpose: "Split workflow into parallel branches"
 
@@ -25,12 +25,12 @@ nodes:
     purpose: "Transcribe audio files"
 
   - id: "parallel_join"
-    type: "system"
+    type: "cli"
     subtype: "parallel"
     purpose: "Wait for all parallel branches to complete"
 
   - id: "aggregate_results"
-    type: "db"
+    type: "api"
     purpose: "Save aggregated results to database"
 
 edges:

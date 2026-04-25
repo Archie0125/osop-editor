@@ -8,7 +8,7 @@ nodes:
     purpose: "Attempt payment via primary gateway"
 
   - id: "payment_status"
-    type: "system"
+    type: "cli"
     subtype: "router"
     purpose: "Check if primary payment succeeded"
 
@@ -17,7 +17,7 @@ nodes:
     purpose: "Attempt payment via secondary gateway"
 
   - id: "payment_success"
-    type: "db"
+    type: "api"
     purpose: "Record successful payment"
 
   - id: "payment_failed"

@@ -83,7 +83,7 @@ nodes:
       secrets: [OPENAI_API_KEY]
       risk_level: medium
   - id: validate_metrics
-    type: docker
+    type: cli
     purpose: 用可重現的 Python 環境做 schema 驗證與規則檢查
     runtime:
       image: python:3.11
@@ -109,7 +109,7 @@ nodes:
       permissions: [docker.run, artifact.read]
       risk_level: medium
   - id: save_db
-    type: db
+    type: api
     purpose: 寫入 PostgreSQL（或其他 DB）供 dashboard 使用
     runtime:
       engine: postgres
@@ -133,7 +133,7 @@ nodes:
       required: true
       approver_role: reviewer
   - id: git_backup
-    type: git
+    type: cli
     purpose: 將抽取結果（或統計摘要）commit 到 repo 當作可追溯備份
     runtime:
       repo: "github.com/org/esg-reports"

@@ -8,7 +8,7 @@ nodes:
     purpose: "Attempt to fetch data from an external API"
 
   - id: "check_success"
-    type: "system"
+    type: "cli"
     subtype: "router"
     purpose: "Check if the API call was successful"
 

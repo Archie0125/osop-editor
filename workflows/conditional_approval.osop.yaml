@@ -9,12 +9,12 @@ nodes:
     role: "employee"
 
   - id: check_amount
-    type: system
+    type: cli
     subtype: router
     purpose: "Check if the purchase amount requires manager approval."
 
   - id: auto_approve
-    type: system
+    type: cli
     purpose: "Automatically approve small requests."
 
   - id: manager_review

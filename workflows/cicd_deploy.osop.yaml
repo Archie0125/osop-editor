@@ -6,7 +6,7 @@ workflow_type:
   secondary: [devops, release]
 nodes:
   - id: on_git_push
-    type: git
+    type: api
     purpose: 監聽 repo push 事件（或由外部 trigger）
     runtime:
       repo: "github.com/org/myapp"
@@ -28,7 +28,7 @@ nodes:
       command: "npm test"
     timeout_sec: 600
   - id: docker_build
-    type: docker
+    type: cli
     purpose: Build container image
     runtime:
       image: docker:stable
@@ -37,7 +37,7 @@ nodes:
       permissions: [docker.build]
       risk_level: medium
   - id: deploy_staging
-    type: cicd
+    type: cli
     purpose: Deploy to staging environment
     runtime:
       provider: github_actions
@@ -62,7 +62,7 @@ nodes:
       strategy: fixed
       backoff_sec: 5
   - id: rollback
-    type: cicd
+    type: cli
     purpose: Rollback if smoke test fails
     runtime:
       provider: github_actions
